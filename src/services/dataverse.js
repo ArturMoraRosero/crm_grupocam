@@ -1,19 +1,13 @@
 /**
- * SharePoint REST API Connector via Microsoft Graph
+ * Dataverse REST API Connector & Microsoft OAuth 2.0 Client
  * Grupo Empresarial CAM Commercial System
  */
-
-const SHAREPOINT_SITE = 'https://cambricondes.sharepoint.com/sites/CRMGrupoCAM';
-const LIST_NAME = 'Oportunidades';
-const GRAPH_ENDPOINT = 'https://graph.microsoft.com/v1.0';
 
 let logSubscribers = [];
 
 export function subscribeToLogs(callback) {
   logSubscribers.push(callback);
-  return () => {
-    logSubscribers = logSubscribers.filter(cb => cb !== callback);
-  };
+  return () => { logSubscribers = logSubscribers.filter(cb => cb !== callback); };
 }
 
 function pushLog(method, url, status, requestBody = null, responseBody = null) {
@@ -29,17 +23,17 @@ function pushLog(method, url, status, requestBody = null, responseBody = null) {
     const existingLogs = JSON.parse(sessionStorage.getItem('dataverse_logs') || '[]');
     existingLogs.unshift(logEntry);
     sessionStorage.setItem('dataverse_logs', JSON.stringify(existingLogs.slice(0, 100)));
-  } catch (e) {}
+  } catch (e) { console.error(e); }
 }
 
 const DEFAULT_CONFIG = {
   mode: 'live',
   authMethod: 'sso',
-  envUrl: SHAREPOINT_SITE,
+  envUrl: 'https://org41017f3e.api.crm2.dynamics.com',
   tenantId: '1ca0c30f-47ee-40c7-a615-d950a4b2f9ca',
   clientId: '53ad5b18-7e6c-4cd1-aa08-48c0c851a67c',
   clientSecret: '',
-  entityName: LIST_NAME,
+  entityName: 'cr168_salesopportunities',
   corsProxy: '',
   isConfigured: true
 };
@@ -51,10 +45,72 @@ export function getSettings() {
 
 export function saveSettings(settings) {
   localStorage.setItem('dataverse_settings', JSON.stringify(settings));
-  pushLog('SYSTEM', 'Configuración Guardada', '200 OK');
+  pushLog('SYSTEM', 'Configuración de Dataverse Guardada', '200 OK', null, settings);
 }
 
-// Microsoft SSO Login via Graph API
+const STAGE_TO_INT = {
+  'Prospección': 0, 'Prospeccion': 0,
+  'Calificación': 553050001, 'Calificacion': 553050001,
+  'Diagnóstico técnico': 553050001, 'Diagnostico tecnico': 553050001,
+  'Propuesta': 553050002,
+  'Negociación': 553050003, 'Negociacion': 553050003,
+  'Seguimiento': 553050003,
+  'Cierre': 553050004,
+  'Cierre Ganado': 553050004,
+  'Cierre Perdido': 553050005,
+  'Postventa': 553050004
+};
+
+const INT_TO_STAGE = {
+  0: 'Prospección',
+  553050001: 'Calificación',
+  553050002: 'Propuesta',
+  553050003: 'Negociación',
+  553050004: 'Cierre',
+  553050005: 'Cierre Perdido'
+};
+
+function mapToOData(op) {
+  return {
+    cr168_salesopportunityid: op.id,
+    cr168_opportunitycode: op.codigo,
+    cr168_clientorcompany: op.cliente,
+    cr168_contactandphone: `${op.contactoName || ''} - ${op.contactoPhone || ''}`,
+    cr168_businessline: op.lineaNegocio,
+    cr168_estimatedamount: Number(op.monto || 0),
+    cr168_closeprobability: parseFloat(op.probabilidad) || 0.5,
+    cr168_salesstage: STAGE_TO_INT[op.etapa] ?? 0,
+    cr168_nextaction: op.proximaAccion,
+    cr168_nextactiondate: op.fechaAccion ? `${op.fechaAccion}T00:00:00Z` : null,
+    cr168_responsibleperson: op.responsable
+  };
+}
+
+function mapFromOData(odata) {
+  return {
+    id: odata.cr168_salesopportunityid || 'op_' + Math.random().toString(36).substr(2, 9),
+    codigo: odata.cr168_opportunitycode || 'OP-MIG-' + Math.floor(100 + Math.random() * 900),
+    cliente: odata.cr168_clientorcompany || 'Cliente Sin Nombre',
+    contactoName: odata.cr168_contactandphone ? odata.cr168_contactandphone.split(' - ')[0] : '',
+    contactoEmail: '',
+    contactoPhone: odata.cr168_contactandphone?.includes(' - ') ? odata.cr168_contactandphone.split(' - ')[1] : '',
+    tipoCliente: 'Privado',
+    lineaNegocio: odata.cr168_businessline || 'CAM SCI',
+    proyecto: '',
+    monto: Number(odata.cr168_estimatedamount || 0),
+    margen: 0,
+    probabilidad: odata.cr168_closeprobability ? `${odata.cr168_closeprobability * 100}%` : '50%',
+    etapa: INT_TO_STAGE[odata.cr168_salesstage] || 'Prospección',
+    proximaAccion: odata.cr168_nextaction || 'Llamada',
+    fechaAccion: odata.cr168_nextactiondate ? odata.cr168_nextactiondate.split('T')[0] : '',
+    responsable: odata.cr168_responsibleperson || 'Arturo Mora',
+    estado: 'Abierta',
+    motivoPerdida: '',
+    fechaIngreso: new Date().toISOString().split('T')[0],
+    notas: ''
+  };
+}
+
 export function loginMicrosoft() {
   const settings = getSettings();
   const redirectUri = window.location.origin + '/';
@@ -62,10 +118,10 @@ export function loginMicrosoft() {
     client_id: settings.clientId,
     response_type: 'token',
     redirect_uri: redirectUri,
-    scope: 'https://graph.microsoft.com/Sites.ReadWrite.All',
+    scope: `${settings.envUrl}/user_impersonation`,
     state: 'grupocam_crm_auth_state'
   }).toString();
-  pushLog('SYSTEM', 'Redirigiendo a Microsoft SSO...', '302 Found');
+  pushLog('SYSTEM', 'Redirigiendo a Microsoft Entra ID para SSO...', '302 Found');
   setTimeout(() => { window.location.href = authUrl; }, 200);
 }
 
@@ -91,189 +147,133 @@ export function checkForRedirectToken() {
   if (accessToken) {
     const expiryTime = Date.now() + parseInt(expiresIn || '3600', 10) * 1000;
     sessionStorage.setItem('dataverse_oauth_token', JSON.stringify({ token: accessToken, expiryTime }));
-    window.history.replaceState(null, null, window.location.pathname);
-    pushLog('SYSTEM', 'Token Microsoft Graph obtenido', '200 OK');
+    window.history.replaceState(null, null, window.location.pathname + window.location.search);
+    pushLog('SYSTEM', 'Token SSO Microsoft obtenido', '200 OK');
     return accessToken;
   }
   return null;
 }
 
-// Get SharePoint site ID via Graph API
-async function getSiteId(token) {
-  const siteHost = 'cambricondes.sharepoint.com';
-  const sitePath = '/sites/CRMGrupoCAM';
-  const url = `${GRAPH_ENDPOINT}/sites/${siteHost}:${sitePath}`;
-  const res = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+export async function authenticateOAuth() {
+  const settings = getSettings();
+  if (settings.mode !== 'live') {
+    return 'simulated_token_' + Math.random().toString(36).substring(7);
+  }
+  if (settings.authMethod === 'sso') {
+    const token = getActiveToken();
+    if (!token) throw new Error('Requiere iniciar sesión con Microsoft.');
+    return token;
+  }
+  const tokenUrl = `https://login.microsoftonline.com/${settings.tenantId}/oauth2/v2.0/token`;
+  const finalUrl = settings.corsProxy ? `${settings.corsProxy}${tokenUrl}` : tokenUrl;
+  const bodyParams = new URLSearchParams();
+  bodyParams.append('grant_type', 'client_credentials');
+  bodyParams.append('client_id', settings.clientId);
+  bodyParams.append('client_secret', settings.clientSecret);
+  bodyParams.append('scope', `${settings.envUrl}/.default`);
+  const response = await fetch(finalUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: bodyParams.toString()
   });
-  const data = await res.json();
-  return data.id;
-}
-
-// Get SharePoint list ID by name
-async function getListId(token, siteId) {
-  const url = `${GRAPH_ENDPOINT}/sites/${siteId}/lists?$filter=displayName eq '${LIST_NAME}'`;
-  const res = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-  });
-  const data = await res.json();
-  return data.value?.[0]?.id;
-}
-
-// Map SharePoint item → React app model
-function mapFromSharePoint(item) {
-  const f = item.fields || item;
-  return {
-    id: String(item.id || f.id || ''),
-    codigo: f.Title || 'OP-' + item.id,
-    cliente: f.Cliente || '',
-    contactoName: '',
-    contactoEmail: '',
-    contactoPhone: '',
-    tipoCliente: 'Privado',
-    lineaNegocio: 'CAM SCI',
-    proyecto: '',
-    monto: Number(f.Valor || 0),
-    margen: 0,
-    probabilidad: '50%',
-    etapa: f.Etapa || 'Prospección',
-    proximaAccion: 'Llamada',
-    fechaAccion: f.Fechadecierre ? f.Fechadecierre.split('T')[0] : '',
-    responsable: f.Responsable || 'Arturo Mora',
-    estado: 'Abierta',
-    motivoPerdida: '',
-    fechaIngreso: new Date().toISOString().split('T')[0],
-    notas: ''
-  };
-}
-
-// Map React app model → SharePoint fields
-function mapToSharePoint(op) {
-  return {
-    Title: op.codigo || op.cliente,
-    Cliente: op.cliente,
-    Valor: Number(op.monto || 0),
-    Etapa: op.etapa,
-    Fechadecierre: op.fechaAccion ? `${op.fechaAccion}T00:00:00Z` : null,
-    Responsable: op.responsable
-  };
+  if (!response.ok) throw new Error(`Auth failed: ${response.statusText}`);
+  const data = await response.json();
+  return data.access_token;
 }
 
 export async function fetchOpportunities(localData) {
   const settings = getSettings();
-
   if (settings.mode !== 'live') {
-    pushLog('GET', `${SHAREPOINT_SITE}/Oportunidades`, '200 OK (Demo Mode)');
+    pushLog('GET', `${settings.envUrl}/api/data/v9.2/${settings.entityName}`, '200 OK (Demo Mode)');
     return localData;
   }
-
-  const token = getActiveToken();
-  if (!token) {
-    pushLog('GET', 'SharePoint', '401 Sin Token - Usando datos locales');
-    return localData;
-  }
-
+  const token = await authenticateOAuth();
+  const endpoint = `${settings.envUrl}/api/data/v9.2/${settings.entityName}`;
+  pushLog('GET', endpoint, '102 Processing...');
   try {
-    pushLog('GET', `${GRAPH_ENDPOINT}/sites/.../lists/${LIST_NAME}/items`, '102 Consultando SharePoint...');
-    const siteId = await getSiteId(token);
-    const listId = await getListId(token, siteId);
-    const url = `${GRAPH_ENDPOINT}/sites/${siteId}/lists/${listId}/items?expand=fields`;
-    const res = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    const response = await fetch(endpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'OData-MaxVersion': '4.0',
+        'OData-Version': '4.0'
+      }
     });
-    const data = await res.json();
-    pushLog('GET', url, '200 OK', null, data);
-    if (data.value?.length > 0) {
-      return data.value.map(mapFromSharePoint);
+    if (!response.ok) {
+      const errText = await response.text();
+      pushLog('GET', endpoint, `${response.status} ${response.statusText}`, null, JSON.parse(errText || '{}'));
+      throw new Error(`Fetch failed: ${response.statusText}`);
     }
-    return localData;
+    const data = await response.json();
+    pushLog('GET', endpoint, '200 OK', null, data);
+    return data.value?.length > 0 ? data.value.map(mapFromOData) : localData;
   } catch (e) {
-    pushLog('GET', 'SharePoint', `500 Error: ${e.message}`);
-    return localData;
+    pushLog('GET', endpoint, `500 Error: ${e.message}`);
+    throw e;
   }
 }
 
 export async function sendOpportunity(op, isNew = false) {
   const settings = getSettings();
-
   if (settings.mode !== 'live') {
-    pushLog(isNew ? 'POST' : 'PATCH', `${SHAREPOINT_SITE}/Oportunidades`, isNew ? '201 Created (Demo)' : '204 Updated (Demo)');
+    pushLog(isNew ? 'POST' : 'PATCH', `${settings.envUrl}/api/data/v9.2/${settings.entityName}`, isNew ? '201 Created (Demo)' : '204 Updated (Demo)');
     return op;
   }
-
-  const token = getActiveToken();
-  if (!token) {
-    pushLog('SYSTEM', 'Sin token - guardado solo local', '401');
-    return op;
-  }
-
+  const token = await authenticateOAuth();
+  const baseUrl = `${settings.envUrl}/api/data/v9.2/${settings.entityName}`;
+  const endpoint = isNew ? baseUrl : `${baseUrl}(${op.id})`;
+  const method = isNew ? 'POST' : 'PATCH';
+  const payload = mapToOData(op);
+  if (isNew) delete payload.cr168_salesopportunityid;
+  pushLog(method, endpoint, '102 Syncing...', payload);
   try {
-    const siteId = await getSiteId(token);
-    const listId = await getListId(token, siteId);
-    const fields = mapToSharePoint(op);
-
-    if (isNew) {
-      const url = `${GRAPH_ENDPOINT}/sites/${siteId}/lists/${listId}/items`;
-      pushLog('POST', url, '102 Creando en SharePoint...', fields);
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fields })
-      });
-      const data = await res.json();
-      pushLog('POST', url, '201 Created', null, data);
-      return { ...op, id: String(data.id) };
-    } else {
-      const url = `${GRAPH_ENDPOINT}/sites/${siteId}/lists/${listId}/items/${op.id}/fields`;
-      pushLog('PATCH', url, '102 Actualizando en SharePoint...', fields);
-      await fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(fields)
-      });
-      pushLog('PATCH', url, '200 OK');
-      return op;
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'OData-MaxVersion': '4.0',
+        'OData-Version': '4.0',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, JSON.parse(errText || '{}'));
+      throw new Error(`Dataverse sync failed: ${response.statusText}`);
     }
+    const responseStatus = isNew ? '201 Created' : '204 No Content';
+    let responseData = null;
+    if (response.status !== 204) responseData = await response.json();
+    pushLog(method, endpoint, responseStatus, null, responseData);
+    return responseData ? mapFromOData(responseData) : op;
   } catch (e) {
-    pushLog('ERROR', 'SharePoint', `500 ${e.message}`);
-    return op;
+    pushLog(method, endpoint, `500 Sync Error: ${e.message}`);
+    throw e;
   }
 }
 
 export async function removeOpportunity(id) {
   const settings = getSettings();
-
   if (settings.mode !== 'live') {
-    pushLog('DELETE', `${SHAREPOINT_SITE}/Oportunidades/${id}`, '204 Deleted (Demo)');
+    pushLog('DELETE', `${settings.envUrl}/api/data/v9.2/${settings.entityName}(${id})`, '204 Deleted (Demo)');
     return true;
   }
-
-  const token = getActiveToken();
-  if (!token) return true;
-
+  const token = await authenticateOAuth();
+  const endpoint = `${settings.envUrl}/api/data/v9.2/${settings.entityName}(${id})`;
+  pushLog('DELETE', endpoint, '102 Processing...');
   try {
-    const siteId = await getSiteId(token);
-    const listId = await getListId(token, siteId);
-    const url = `${GRAPH_ENDPOINT}/sites/${siteId}/lists/${listId}/items/${id}`;
-    pushLog('DELETE', url, '102 Eliminando...');
-    await fetch(url, {
+    const response = await fetch(endpoint, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 'Authorization': `Bearer ${token}`, 'OData-MaxVersion': '4.0', 'OData-Version': '4.0' }
     });
-    pushLog('DELETE', url, '204 No Content');
+    if (!response.ok) throw new Error(`Delete failed: ${response.statusText}`);
+    pushLog('DELETE', endpoint, '204 No Content');
     return true;
   } catch (e) {
-    pushLog('DELETE', 'SharePoint', `500 ${e.message}`);
-    return true;
+    pushLog('DELETE', endpoint, `500 Error: ${e.message}`);
+    throw e;
   }
-}
-
-export async function authenticateOAuth() {
-  return getActiveToken();
 }
