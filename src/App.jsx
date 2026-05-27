@@ -529,7 +529,7 @@ export default function App() {
       'Tipo Cliente': op.tipoCliente,
       'Línea de Negocio': op.lineaNegocio,
       'Monto Estimado (USD)': op.monto,
-      'Margen Bruto (%)': op.margen,
+
       'Probabilidad (%)': op.probabilidad,
       'Etapa Comercial': op.etapa,
       'Estado': op.estado,
@@ -1220,7 +1220,7 @@ export default function App() {
                     <th style={{ cursor: 'pointer' }} onClick={() => handleSort('codigo')}>Código {sortField === 'codigo' ? (sortAsc ? '▲' : '▼') : ''}</th>
                     <th style={{ cursor: 'pointer' }} onClick={() => handleSort('cliente')}>Cliente {sortField === 'cliente' ? (sortAsc ? '▲' : '▼') : ''}</th>
                     <th style={{ cursor: 'pointer' }} onClick={() => handleSort('monto')}>Monto {sortField === 'monto' ? (sortAsc ? '▲' : '▼') : ''}</th>
-                    <th>Margen %</th>
+
                     <th style={{ cursor: 'pointer' }} onClick={() => handleSort('etapa')}>Etapa {sortField === 'etapa' ? (sortAsc ? '▲' : '▼') : ''}</th>
                     <th>Línea</th>
                     <th>Estado</th>
@@ -1259,7 +1259,7 @@ export default function App() {
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{op.contactoName}</div>
                           </td>
                           <td style={{ fontWeight: 'bold' }}>${op.monto?.toLocaleString()}</td>
-                          <td>{op.margen}%</td>
+
                           <td>
                             <span style={{ 
                               background: 'var(--bg-tertiary)', 
@@ -1859,25 +1859,14 @@ export default function App() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                <div>
-                  <label>Margen Bruto (%)</label>
-                  <input 
-                    type="number" 
-                    value={currentOp.margen} 
-                    onChange={(e) => setCurrentOp({ ...currentOp, margen: e.target.value })}
-                    placeholder="Ej. 25"
-                  />
-                </div>
-                <div>
+              <div>
                   <label>Probabilidad de Cierre</label>
-                  <select 
-                    value={currentOp.probabilidad} 
+                  <select
+                    value={currentOp.probabilidad}
                     onChange={(e) => setCurrentOp({ ...currentOp, probabilidad: e.target.value })}
                   >
                     {PROBABILIDADES.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
-                </div>
               </div>
 
               <div>
