@@ -477,7 +477,7 @@ export default function App() {
     }
   };
 
-  // Dataverse Sync All Trigger
+  // Dataverse Sync All Trigger (GET)
   const handleDataverseSyncAll = async () => {
     triggerToast('🔄 Sincronizando con Microsoft Dataverse...');
     try {
@@ -489,6 +489,33 @@ export default function App() {
     } catch (e) {
       triggerToast(`❌ Error de conexión al sincronizar: ${e.message || 'CORS o Red'}`, '#f87171');
     }
+  };
+
+  // Migrar tratos locales → Dataverse (POST bulk)
+  const handleMigrateLocalToDataverse = async () => {
+    if (!window.confirm(`¿Migrar ${opportunities.length} tratos locales a Dataverse? Esta acción los enviará como registros nuevos.`)) return;
+    triggerToast('📤 Migrando tratos a Dataverse...');
+    let ok = 0;
+    let fail = 0;
+    const migrated = [];
+    for (const op of opportunities) {
+      try {
+        const result = await sendOpportunity({ ...op, id: '' }, true);
+        migrated.push(result || op);
+        ok++;
+        logAudit('Migración Dataverse', op.id, `Trato "${op.cliente}" migrado exitosamente.`);
+      } catch (e) {
+        migrated.push(op);
+        fail++;
+      }
+    }
+    setOpportunities(migrated);
+    triggerToast(
+      fail === 0
+        ? `✅ ${ok} tratos migrados correctamente a Dataverse.`
+        : `⚠️ ${ok} migrados, ${fail} fallaron. Revisa la consola.`,
+      fail === 0 ? 'rgba(16,185,129,0.5)' : 'rgba(234,179,8,0.5)'
+    );
   };
 
   // Logout interactive user from Microsoft
@@ -1599,6 +1626,25 @@ export default function App() {
                       🔄 Sincronizar Ahora
                     </button>
                   </div>
+
+                  {/* Migración local → Dataverse */}
+                  {opportunities.length > 0 && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 10, border: '1px solid var(--cam-red)', background: 'rgba(192,57,43,0.08)' }}>
+                      <p style={{ color: '#fff', fontSize: '0.88rem', fontWeight: 600, marginBottom: 4 }}>
+                        📤 Migración de tratos locales
+                      </p>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.8rem' }}>
+                        {opportunities.length} tratos en localStorage. Envíalos a Dataverse para sincronización completa.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleMigrateLocalToDataverse}
+                        style={{ padding: '0.5rem 1.2rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        📤 Migrar {opportunities.length} tratos a Dataverse
+                      </button>
+                    </div>
+                  )}
                 </form>
               </div>
 
