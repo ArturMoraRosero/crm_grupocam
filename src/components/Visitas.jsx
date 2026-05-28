@@ -424,6 +424,135 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving }) {
   );
 }
 
+// ── Helpers de período ────────────────────────────────────────────────────────
+
+function getPeriodRange(period) {
+  const now = new Date();
+  let start, end;
+  if (period === 'semana') {
+    const day = now.getDay() || 7;
+    start = new Date(now); start.setDate(now.getDate() - day + 1); start.setHours(0,0,0,0);
+    end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
+  } else if (period === 'mes') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  } else if (period === 'mes_anterior') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  } else {
+    return null;
+  }
+  return { start, end };
+}
+
+function filterByPeriod(visits, period) {
+  const range = getPeriodRange(period);
+  if (!range) return visits;
+  return visits.filter(v => {
+    if (!v.fecha) return false;
+    const d = new Date(v.fecha);
+    return d >= range.start && d <= range.end;
+  });
+}
+
+// ── Gráfico de actividad SVG ──────────────────────────────────────────────────
+
+function VisitChart({ visits, period }) {
+  const W = 560, H = 110, PAD = { l: 36, r: 12, t: 10, b: 28 };
+  const innerW = W - PAD.l - PAD.r;
+  const innerH = H - PAD.t - PAD.b;
+
+  // Generar buckets
+  const now = new Date();
+  let buckets = [];
+
+  if (period === 'semana') {
+    const day = now.getDay() || 7;
+    const monday = new Date(now); monday.setDate(now.getDate() - day + 1); monday.setHours(0,0,0,0);
+    const labels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    buckets = labels.map((label, i) => {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      const key = d.toISOString().split('T')[0];
+      return { label, key, count: 0 };
+    });
+  } else {
+    // mes actual o anterior — agrupar por semana del mes
+    const range = getPeriodRange(period);
+    if (!range) return null;
+    const { start, end } = range;
+    const weeks = [];
+    let cur = new Date(start);
+    let wNum = 1;
+    while (cur <= end) {
+      const wStart = new Date(cur);
+      const wEnd = new Date(cur); wEnd.setDate(wEnd.getDate() + 6);
+      if (wEnd > end) wEnd.setTime(end.getTime());
+      weeks.push({ label: `Sem ${wNum}`, start: wStart, end: wEnd, count: 0 });
+      cur.setDate(cur.getDate() + 7);
+      wNum++;
+    }
+    buckets = weeks.map(w => ({
+      label: w.label,
+      key: null,
+      start: w.start,
+      end: w.end,
+      count: 0
+    }));
+  }
+
+  // Contar visitas por bucket
+  visits.forEach(v => {
+    if (!v.fecha) return;
+    const d = new Date(v.fecha);
+    buckets.forEach(b => {
+      if (b.key) {
+        if (v.fecha === b.key) b.count++;
+      } else {
+        if (d >= b.start && d <= b.end) b.count++;
+      }
+    });
+  });
+
+  const maxVal = Math.max(...buckets.map(b => b.count), 1);
+  const barW = Math.min(40, (innerW / buckets.length) - 8);
+  const barSpacing = innerW / buckets.length;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }}>
+      {/* Grid lines */}
+      {[0, 0.5, 1].map(frac => {
+        const y = PAD.t + innerH * (1 - frac);
+        return (
+          <g key={frac}>
+            <line x1={PAD.l} x2={W - PAD.r} y1={y} y2={y} stroke="var(--border-primary)" strokeWidth="1" />
+            <text x={PAD.l - 6} y={y + 4} fontSize="9" fill="var(--text-secondary)" textAnchor="end">
+              {frac === 0 ? 0 : Math.round(maxVal * frac)}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Bars */}
+      {buckets.map((b, i) => {
+        const x = PAD.l + barSpacing * i + barSpacing / 2 - barW / 2;
+        const barH = maxVal > 0 ? (b.count / maxVal) * innerH : 0;
+        const y = PAD.t + innerH - barH;
+        const isToday = b.key === new Date().toISOString().split('T')[0];
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={barW} height={Math.max(barH, 1)}
+              rx={4} fill={isToday ? 'var(--cam-red)' : 'rgba(192,57,43,0.35)'} />
+            {b.count > 0 && (
+              <text x={x + barW / 2} y={y - 3} fontSize="10" fill="#fff" textAnchor="middle">{b.count}</text>
+            )}
+            <text x={x + barW / 2} y={H - 4} fontSize="9" fill="var(--text-secondary)" textAnchor="middle">{b.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function Visitas({ opportunities = [], triggerToast }) {
@@ -437,6 +566,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterEjecutivo, setFilterEjecutivo] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [period, setPeriod] = useState('mes');
 
   // Persist to localStorage
   useEffect(() => {
@@ -454,26 +584,27 @@ export default function Visitas({ opportunities = [], triggerToast }) {
         setVisits(data);
         localStorage.setItem('crm_visits', JSON.stringify(data));
       })
-      .catch(() => {}) // modo demo o sin token: usa localStorage
+      .catch(() => {})
       .finally(() => setIsSyncing(false));
   }, []);
 
-  // ── Métricas ──
+  // ── Métricas por período ──
 
-  const visitsThisMonth = visits.filter(v => {
-    if (!v.fecha) return false;
-    const now = new Date();
-    const d = new Date(v.fecha);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
+  const periodVisits = filterByPeriod(visits, period);
+  const totalMonto = periodVisits.reduce((s, v) => s + Number(v.montoEstimado || 0), 0);
+  const enSeguimiento = periodVisits.filter(v => v.estadoOportunidad === 'En seguimiento').length;
+  const paraCotizar = periodVisits.filter(v => v.estadoOportunidad === 'Cotizar / presupuestar').length;
+  const cerrados = periodVisits.filter(v => v.estadoOportunidad === 'Cerrado / ganado').length;
 
-  const totalMonto = visits.reduce((s, v) => s + Number(v.montoEstimado || 0), 0);
-  const enSeguimiento = visits.filter(v => v.estadoOportunidad === 'En seguimiento').length;
-  const paraCotizar = visits.filter(v => v.estadoOportunidad === 'Cotizar / presupuestar').length;
+  // Por ejecutivo
+  const byEjecutivo = USUARIOS.map(u => ({
+    name: u.name.split(' ')[0],
+    count: periodVisits.filter(v => v.ejecutivo === u.name).length
+  })).filter(e => e.count > 0);
 
   // ── Filtrado ──
 
-  const filtered = visits.filter(v => {
+  const filtered = periodVisits.filter(v => {
     const matchSearch = !searchTerm ||
       v.nombreProyecto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.contacto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -533,22 +664,89 @@ export default function Visitas({ opportunities = [], triggerToast }) {
 
   // ── Render ──
 
+  const PERIODS = [
+    { key: 'semana', label: 'Esta semana' },
+    { key: 'mes', label: 'Este mes' },
+    { key: 'mes_anterior', label: 'Mes anterior' },
+    { key: 'todo', label: 'Todo' }
+  ];
+
+  const periodLabel = PERIODS.find(p => p.key === period)?.label || '';
+
   return (
     <div className="animate-fade-in">
 
+      {/* Selector de período */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.4rem' }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 4 }}>Período:</span>
+        {PERIODS.map(p => (
+          <button key={p.key} onClick={() => setPeriod(p.key)}
+            style={{
+              padding: '0.38rem 1rem', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+              border: `1px solid ${period === p.key ? 'var(--cam-red)' : 'var(--border-primary)'}`,
+              background: period === p.key ? 'rgba(192,57,43,0.12)' : 'var(--bg-secondary)',
+              color: period === p.key ? 'var(--cam-red)' : 'var(--text-secondary)'
+            }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.2rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.2rem', marginBottom: '1.4rem' }}>
         {[
-          { label: 'Visitas este mes', val: visitsThisMonth.length, color: '#fff' },
-          { label: 'En seguimiento',   val: enSeguimiento,           color: '#e67e22' },
-          { label: 'Para cotizar',     val: paraCotizar,             color: '#27ae60' },
-          { label: 'Monto estimado',   val: `$${totalMonto.toLocaleString()}`, color: '#fff' }
+          { label: `Visitas · ${periodLabel}`, val: periodVisits.length, color: '#fff' },
+          { label: 'En seguimiento',            val: enSeguimiento,       color: '#e67e22' },
+          { label: 'Para cotizar',              val: paraCotizar,         color: '#5ba4e5' },
+          { label: 'Cerrados / ganados',        val: cerrados,            color: '#27ae60' }
         ].map(k => (
           <div key={k.label} className="kpi-card">
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>{k.label}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>{k.label}</span>
             <div style={{ fontSize: '2rem', fontWeight: 700, color: k.color, margin: '0.3rem 0' }}>{k.val}</div>
           </div>
         ))}
+      </div>
+
+      {/* Dashboard: gráfico + breakdown ejecutivo */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1.2rem', marginBottom: '1.6rem' }}>
+        {/* Gráfico actividad */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 14, padding: '1.2rem 1.4rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>
+              📊 Actividad de visitas — {periodLabel}
+            </span>
+            {totalMonto > 0 && (
+              <span style={{ fontSize: '0.82rem', color: '#27ae60', fontWeight: 600 }}>
+                ${totalMonto.toLocaleString()} estimado
+              </span>
+            )}
+          </div>
+          {periodVisits.length === 0
+            ? <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Sin visitas en este período</div>
+            : <VisitChart visits={periodVisits} period={period} />
+          }
+        </div>
+
+        {/* Breakdown por ejecutivo */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 14, padding: '1.2rem 1.4rem', minWidth: 180 }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', display: 'block', marginBottom: '1rem' }}>
+            👤 Por ejecutivo
+          </span>
+          {byEjecutivo.length === 0
+            ? <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>—</div>
+            : byEjecutivo.map(e => (
+              <div key={e.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 16 }}>
+                <span style={{ fontSize: '0.83rem', color: 'var(--text-primary)' }}>{e.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 60, height: 6, borderRadius: 4, background: 'var(--border-primary)', overflow: 'hidden' }}>
+                    <div style={{ width: `${(e.count / periodVisits.length) * 100}%`, height: '100%', background: 'var(--cam-red)', borderRadius: 4 }} />
+                  </div>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', minWidth: 16, textAlign: 'right' }}>{e.count}</span>
+                </div>
+              </div>
+            ))
+          }
+        </div>
       </div>
 
       {/* Barra de herramientas */}
