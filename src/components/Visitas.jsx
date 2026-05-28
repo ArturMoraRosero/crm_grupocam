@@ -433,6 +433,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterEjecutivo, setFilterEjecutivo] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -441,6 +442,21 @@ export default function Visitas({ opportunities = [], triggerToast }) {
   useEffect(() => {
     localStorage.setItem('crm_visits', JSON.stringify(visits));
   }, [visits]);
+
+  // Fetch desde Dataverse al montar
+  useEffect(() => {
+    const localData = (() => {
+      try { return JSON.parse(localStorage.getItem('crm_visits') || '[]'); } catch { return []; }
+    })();
+    setIsSyncing(true);
+    fetchVisits(localData)
+      .then(data => {
+        setVisits(data);
+        localStorage.setItem('crm_visits', JSON.stringify(data));
+      })
+      .catch(() => {}) // modo demo o sin token: usa localStorage
+      .finally(() => setIsSyncing(false));
+  }, []);
 
   // ── Métricas ──
 
@@ -554,6 +570,11 @@ export default function Visitas({ opportunities = [], triggerToast }) {
           <option value="">Todos los ejecutivos</option>
           {USUARIOS.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
         </select>
+        {isSyncing && (
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            ⏳ Sincronizando...
+          </span>
+        )}
         <button onClick={handleNew}
           style={{ padding: '0.55rem 1.4rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
           + Nueva visita
