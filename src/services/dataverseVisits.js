@@ -23,7 +23,7 @@ function pushLog(method, url, status, requestBody = null, responseBody = null) {
   logSubscribers.forEach(cb => cb(logEntry));
 }
 
-const ENTITY_NAME = 'cr168_visits';
+const ENTITY_NAME = 'cr168_visitses';
 
 // ── Campo mapping: app → OData ──────────────────────────────────────────────
 
