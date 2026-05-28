@@ -28,37 +28,55 @@ const ENTITY_NAME = 'cr168_visitses';
 // ── Campo mapping: app → OData ──────────────────────────────────────────────
 
 function mapToOData(v) {
-  return {
-    cr168_visitid: v.id,
-    cr168_visitdatetime: v.fecha && v.hora
+  const payload = {};
+
+  // Fecha y hora
+  if (v.fecha) {
+    payload.cr168_visitdatetime = v.hora
       ? `${v.fecha}T${v.hora}:00Z`
-      : v.fecha ? `${v.fecha}T00:00:00Z` : null,
-    cr168_executive: v.ejecutivo,
-    cr168_sector: v.sector,
-    cr168_visittype: v.tipoVisita,
-    cr168_projectname: v.nombreProyecto,
-    cr168_address: v.direccion,
-    cr168_mapslink: v.linkMaps,
-    cr168_coordinates: v.coordenadas,
-    cr168_routesequence: v.secuenciaRecorrido,
-    cr168_clienttype: v.tipoCliente,
-    cr168_constructionstage: v.etapaObra,
-    cr168_businessline: v.lineaNegocio,
-    cr168_contactidentified: v.contacto,
-    cr168_decisionmaker: v.decisor,
-    cr168_detectedneeds: v.necesidadDetectada,
-    cr168_estimatedamount: Number(v.montoEstimado || 0),
-    cr168_commercialpriority: v.prioridad,
-    cr168_opportunitystatus: v.estadoOportunidad,
-    cr168_nextaction: v.proximaAccion,
-    cr168_followupdate: v.fechaSeguimiento ? `${v.fechaSeguimiento}T00:00:00Z` : null,
-    cr168_nextstepowner: v.responsableSiguiente,
-    cr168_closeprobability: parseFloat(v.probabilidadCierre) || 0,
-    cr168_observations: v.observaciones,
-    cr168_projects: v.proyectos ? v.proyectos.join(',') : '',
-    cr168_products: v.productos ? v.productos.join(',') : '',
-    cr168_opportunityref: v.oportunidadId || null
-  };
+      : `${v.fecha}T00:00:00Z`;
+  }
+
+  // Campos de texto — solo se envían si tienen valor
+  if (v.ejecutivo)           payload.cr168_executive          = v.ejecutivo;
+  if (v.sector)              payload.cr168_sector             = v.sector;
+  if (v.tipoVisita)          payload.cr168_visittype          = v.tipoVisita;
+  if (v.nombreProyecto)      payload.cr168_projectname        = v.nombreProyecto;
+  if (v.direccion)           payload.cr168_address            = v.direccion;
+  if (v.linkMaps)            payload.cr168_mapslink           = v.linkMaps;
+  if (v.coordenadas)         payload.cr168_coordinates        = v.coordenadas;
+  if (v.secuenciaRecorrido)  payload.cr168_routesequence      = v.secuenciaRecorrido;
+  if (v.tipoCliente)         payload.cr168_clienttype         = v.tipoCliente;
+  if (v.etapaObra)           payload.cr168_constructionstage  = v.etapaObra;
+  if (v.lineaNegocio)        payload.cr168_businessline       = v.lineaNegocio;
+  if (v.contacto)            payload.cr168_contactidentified  = v.contacto;
+  if (v.decisor)             payload.cr168_decisionmaker      = v.decisor;
+  if (v.necesidadDetectada)  payload.cr168_detectedneeds      = v.necesidadDetectada;
+  if (v.prioridad)           payload.cr168_commercialpriority = v.prioridad;
+  if (v.estadoOportunidad)   payload.cr168_opportunitystatus  = v.estadoOportunidad;
+  if (v.proximaAccion)       payload.cr168_nextaction         = v.proximaAccion;
+  if (v.responsableSiguiente)payload.cr168_nextstepowner      = v.responsableSiguiente;
+  if (v.observaciones)       payload.cr168_observations       = v.observaciones;
+  if (v.proyectos?.length)   payload.cr168_projects           = v.proyectos.join(',');
+  if (v.productos?.length)   payload.cr168_products           = v.productos.join(',');
+
+  // Fecha seguimiento
+  if (v.fechaSeguimiento) {
+    payload.cr168_followupdate = `${v.fechaSeguimiento}T00:00:00Z`;
+  }
+
+  // Número decimal
+  if (v.probabilidadCierre != null) {
+    payload.cr168_closeprobability = parseFloat(v.probabilidadCierre) || 0;
+  }
+
+  // Lookup — formato OData bind (evita error 400 con Currency/Lookup)
+  if (v.oportunidadId) {
+    payload['cr168_opportunityref@odata.bind'] =
+      `/cr168_salesopportunities(${v.oportunidadId})`;
+  }
+
+  return payload;
 }
 
 // ── Campo mapping: OData → app ──────────────────────────────────────────────
