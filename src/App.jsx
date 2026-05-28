@@ -6,10 +6,11 @@ import {
 import { 
   ETAPAS, TIPOS_CLIENTE, LINEAS_NEGOCIO, PROXIMAS_ACCIONES, PROBABILIDADES, ESTADOS, MOTIVOS_PERDIDA, USUARIOS, INITIAL_OPPORTUNITIES 
 } from './mockData';
-import { 
+import {
   subscribeToLogs, getSettings, saveSettings, fetchOpportunities, sendOpportunity, removeOpportunity,
   loginMicrosoft, getActiveToken, checkForRedirectToken
 } from './services/dataverse';
+import Visitas from './components/Visitas';
 import './index.css';
 
 // System Roles mapping for active permissions
@@ -20,7 +21,7 @@ const ROLES = [
 ];
 
 export default function App() {
-  // Views navigation: 'Dashboard' | 'Opportunities' | 'Kanban' | 'Audit' | 'Dataverse'
+  // Views navigation: 'Dashboard' | 'Opportunities' | 'Kanban' | 'Visits' | 'Audit' | 'Dataverse'
   const [view, setView] = useState(() => {
     return sessionStorage.getItem('crm_active_view') || 'Dashboard';
   });
@@ -698,6 +699,7 @@ export default function App() {
             { id: 'Dashboard', label: 'Dashboard' },
             { id: 'Opportunities', label: 'Oportunidades' },
             { id: 'Kanban', label: 'Pipeline Comercial' },
+            { id: 'Visits', label: 'Visitas' },
             { id: 'Audit', label: 'Auditoría' },
             { id: 'Dataverse', label: 'Dataverse API' }
           ].map(item => (
@@ -774,6 +776,7 @@ export default function App() {
               {view === 'Dashboard' && 'Dashboard Ejecutivo'}
               {view === 'Opportunities' && 'Cartera de Oportunidades'}
               {view === 'Kanban' && 'Pipeline Comercial'}
+              {view === 'Visits' && 'Visitas Comerciales'}
               {view === 'Audit' && 'Bitácora de Auditoría'}
               {view === 'Dataverse' && 'Configuración de Dataverse'}
             </h1>
@@ -781,6 +784,7 @@ export default function App() {
               {view === 'Dashboard' && 'Métricas comerciales clave y rendimiento del funnel de ventas de Grupo CAM.'}
               {view === 'Opportunities' && 'Gestión avanzada, filtros y acciones masivas para oportunidades.'}
               {view === 'Kanban' && 'Gestión ágil de las 8 fases comerciales del proceso.'}
+              {view === 'Visits' && 'Registro de visitas a obra y campo · Tabla cr168_visits en Dataverse.'}
               {view === 'Audit' && 'Logs históricos inmutables de transacciones y cambios del CRM.'}
               {view === 'Dataverse' && 'Soporte y conexión API REST / OData OAuth 2.0 de Microsoft Dynamics.'}
             </p>
@@ -1412,7 +1416,17 @@ export default function App() {
         )}
 
         {/* ============================================================== */}
-        {/* VIEW 4: AUDIT LOGS BITACORA */}
+        {/* VIEW 4: VISITAS COMERCIALES */}
+        {/* ============================================================== */}
+        {view === 'Visits' && (
+          <Visitas
+            opportunities={opportunities}
+            triggerToast={triggerToast}
+          />
+        )}
+
+        {/* ============================================================== */}
+        {/* VIEW 5: AUDIT LOGS BITACORA */}
         {/* ============================================================== */}
         {view === 'Audit' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
