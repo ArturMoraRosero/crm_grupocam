@@ -184,7 +184,7 @@ export default function App() {
   const visibleOpportunities = opportunities.filter(op => {
     if (activeRole === 'Vendedor') {
       // Vendedor only sees their own assigned opportunities
-      return op.responsable === 'Arturo Mora';
+      return op.responsable === activeUser.user;
     }
     return true; // Gerente and Admin see all
   });
@@ -482,7 +482,8 @@ export default function App() {
     triggerToast('🔄 Sincronizando con Microsoft Dataverse...');
     try {
       const results = await fetchOpportunities(opportunities);
-      if (results && results.length > 0) {
+      // Dataverse manda: reemplazamos el estado con lo que devuelva (aunque sea vacío).
+      if (Array.isArray(results)) {
         setOpportunities(results);
       }
       triggerToast('⚡ Dataverse sincronizado con éxito. Revisa la consola.', 'var(--accent-green)');
@@ -493,15 +494,31 @@ export default function App() {
 
   // Migrar tratos locales → Dataverse (POST bulk)
   const handleMigrateLocalToDataverse = async () => {
-    if (!window.confirm(`¿Migrar ${opportunities.length} tratos locales a Dataverse? Esta acción los enviará como registros nuevos.`)) return;
-    triggerToast('📤 Migrando tratos a Dataverse...');
-    let ok = 0;
-    let fail = 0;
+    if (!window.confirm(`¿Migrar tratos locales a Dataverse? Solo se enviarán los que aún NO existan (validado por código), para no duplicar.`)) return;
+    triggerToast('📤 Verificando duplicados y migrando...');
+    let ok = 0, fail = 0, skipped = 0;
+
+    // Traer los códigos ya existentes en Dataverse para no duplicar
+    let existingCodes = new Set();
+    try {
+      const existing = await fetchOpportunities([]);
+      existingCodes = new Set(existing.map(o => o.codigo));
+    } catch (e) {
+      triggerToast(`❌ No se pudo verificar Dataverse antes de migrar: ${e.message}`, '#f87171');
+      return;
+    }
+
     const migrated = [];
     for (const op of opportunities) {
+      if (op.codigo && existingCodes.has(op.codigo)) {
+        migrated.push(op);
+        skipped++;
+        continue;
+      }
       try {
         const result = await sendOpportunity({ ...op, id: '' }, true);
         migrated.push(result || op);
+        if (op.codigo) existingCodes.add(op.codigo); // evita duplicar dentro del mismo lote
         ok++;
         logAudit('Migración Dataverse', op.id, `Trato "${op.cliente}" migrado exitosamente.`);
       } catch (e) {
@@ -512,8 +529,8 @@ export default function App() {
     setOpportunities(migrated);
     triggerToast(
       fail === 0
-        ? `✅ ${ok} tratos migrados correctamente a Dataverse.`
-        : `⚠️ ${ok} migrados, ${fail} fallaron. Revisa la consola.`,
+        ? `✅ ${ok} migrados, ${skipped} ya existían (omitidos).`
+        : `⚠️ ${ok} migrados, ${skipped} omitidos, ${fail} fallaron. Revisa la consola.`,
       fail === 0 ? 'rgba(16,185,129,0.5)' : 'rgba(234,179,8,0.5)'
     );
   };

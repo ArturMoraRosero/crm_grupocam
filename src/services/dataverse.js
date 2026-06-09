@@ -206,7 +206,9 @@ export async function fetchOpportunities(localData) {
     }
     const data = await response.json();
     pushLog('GET', endpoint, '200 OK', null, data);
-    return data.value?.length > 0 ? data.value.map(mapFromOData) : localData;
+    // Dataverse es la fuente de verdad: devolvemos lo que haya (incluso vacío),
+    // sin caer de vuelta a los datos locales que ocultarían el estado real.
+    return Array.isArray(data.value) ? data.value.map(mapFromOData) : [];
   } catch (e) {
     pushLog('GET', endpoint, `500 Error: ${e.message}`);
     throw e;
