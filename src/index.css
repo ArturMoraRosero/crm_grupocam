@@ -1,29 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Brand Cromática CAM */
-  --cam-red: #c9242a;
-  --cam-red-rgb: 201, 36, 42;
-  --cam-gray-dark: #57585a;
-  --cam-gray-mid: #939598;
-  --cam-gray-light: #f1f2f2;
-  
+  /* Brand Cromática CAM — Grafito & Ámbar */
+  --cam-red: #d98a3d;
+  --cam-red-rgb: 217, 138, 61;
+  --cam-gray-dark: #4a453e;
+  --cam-gray-mid: #9a9081;
+  --cam-gray-light: #f2efea;
+
   /* System UI Tokens */
-  --bg-primary: #0a0b0d;
-  --bg-secondary: #131518;
-  --bg-tertiary: #1b1e22;
-  --text-primary: #f1f2f2;
-  --text-secondary: #939598;
-  
-  --accent-blue: #2563eb;
-  --accent-green: #10b981;
-  --accent-orange: #f59e0b;
-  
-  --border-primary: rgba(147, 149, 152, 0.15);
-  --border-focus: rgba(201, 36, 42, 0.4);
-  
-  --glass-bg: rgba(19, 21, 24, 0.8);
-  --glass-border: rgba(147, 149, 152, 0.12);
+  --bg-primary: #14110e;
+  --bg-secondary: #1e1a15;
+  --bg-tertiary: #28221b;
+  --text-primary: #f2efea;
+  --text-secondary: #a89e92;
+
+  --accent-blue: #4a90d9;
+  --accent-green: #3fae8e;
+  --accent-orange: #e0962f;
+
+  --border-primary: rgba(154, 144, 129, 0.18);
+  --border-focus: rgba(217, 138, 61, 0.45);
+
+  --glass-bg: rgba(30, 26, 21, 0.82);
+  --glass-border: rgba(154, 144, 129, 0.14);
   
   --font-title: 'Outfit', 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;

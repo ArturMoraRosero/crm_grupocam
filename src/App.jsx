@@ -719,22 +719,9 @@ export default function App() {
       }}>
         {/* LOGO AREA */}
         <div style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160" style={{ width: '100%', height: 'auto', borderRadius: '16px' }}>
-            {/* Rounded dark gray mineral block background */}
-            <rect width="400" height="160" rx="32" fill="#57585a"/>
-            
-            {/* "CAM" text in Outfit font */}
-            <text x="46" y="104" fontFamily="'Outfit', 'Inter', 'Helvetica Neue', sans-serif" fontSize="108" fontWeight="800" fill="#f1f2f2" letterSpacing="-3">CAM</text>
-            
-            {/* Red alert top right bar */}
-            <rect x="286" y="26" width="76" height="15" rx="7.5" fill="#c9242a"/>
-            
-            {/* Red alert bottom line */}
-            <rect x="36" y="120" width="328" height="6" rx="3" fill="#c9242a"/>
-            
-            {/* Light gray cimentación bottom line */}
-            <rect x="36" y="132" width="328" height="6" rx="3" fill="#939598"/>
-          </svg>
+          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 18px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <img src="/logo-cam.png" alt="CAM" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          </div>
         </div>
 
         {/* NAVIGATION MENUS */}
