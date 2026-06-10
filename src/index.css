@@ -431,6 +431,25 @@ label {
 /* responsive */
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
+
+  /* Apilar rejillas de 2 columnas en una sola */
+  .resp-2col { grid-template-columns: 1fr !important; gap: 1rem !important; }
+
+  /* Encabezados y títulos más compactos */
+  h1 { font-size: 1.5rem !important; line-height: 1.2; }
+  h2 { font-size: 1.2rem !important; }
+
+  /* Tarjetas del contenido principal con menos relleno (no afecta la barra lateral) */
+  main .glass { padding: 1.25rem !important; }
+
+  /* El encabezado superior se acomoda en varias filas */
+  main header { flex-wrap: wrap; gap: 1rem; }
+
+  /* Las tablas mantienen ancho mínimo y se deslizan horizontalmente */
+  .table-container table { min-width: 680px; }
+
+  /* Kanban: que no fuerce alturas de pantalla completa */
+  [style*="calc(100vh - 240px)"] { height: auto !important; min-height: 60vh; }
 }
 @media (min-width: 769px) {
   .mobile-only { display: none !important; }

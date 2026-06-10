@@ -32,6 +32,15 @@ export default function App() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeRole, setActiveRole] = useState('Admin'); // Default to Admin for complete visual control
+
+  // Responsive / mobile drawer
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   
   // Opportunities State
   const [opportunities, setOpportunities] = useState(() => {
@@ -707,15 +716,25 @@ export default function App() {
       )}
 
       {/* SIDEBAR SIDEBAR */}
-      <aside className="glass" style={{ 
-        width: '280px', 
-        height: '100vh', 
-        padding: '2rem 1.5rem', 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <aside className="glass" style={{
+        width: '280px',
+        height: '100vh',
+        padding: '2rem 1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
         gap: '2.5rem',
-        position: 'sticky',
-        top: 0
+        ...(isMobile ? {
+          position: 'fixed',
+          top: 0,
+          left: sidebarOpen ? 0 : '-320px',
+          zIndex: 1000,
+          transition: 'left 0.3s ease',
+          boxShadow: sidebarOpen ? '0 0 50px rgba(0,0,0,0.7)' : 'none',
+          overflowY: 'auto'
+        } : {
+          position: 'sticky',
+          top: 0
+        })
       }}>
         {/* LOGO AREA */}
         <div style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
@@ -736,7 +755,7 @@ export default function App() {
           ].map(item => (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={() => { setView(item.id); setSidebarOpen(false); }}
               style={{
                 background: view === item.id ? 'var(--cam-red)' : 'transparent',
                 color: '#ffffff',
@@ -790,8 +809,22 @@ export default function App() {
         </div>
       </aside>
 
+      {/* MOBILE: backdrop + hamburger */}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 999 }} />
+      )}
+      {isMobile && (
+        <button
+          onClick={() => setSidebarOpen(o => !o)}
+          aria-label="Menú"
+          style={{ position: 'fixed', top: '0.85rem', left: '0.85rem', zIndex: 1001, background: 'var(--cam-red)', color: '#fff', border: 'none', borderRadius: '10px', width: '46px', height: '46px', fontSize: '1.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+      )}
+
       {/* MAIN CONTAINER CONTENT */}
-      <main style={{ flex: 1, padding: '2.5rem', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: isMobile ? '4.5rem 1rem 1.5rem' : '2.5rem', overflowY: 'auto', width: isMobile ? '100%' : 'auto', minWidth: 0 }}>
         
         {/* HEADER BAR AND TOOLS */}
         <header style={{ 
@@ -979,7 +1012,7 @@ export default function App() {
             </div>
 
             {/* DASHBOARD PLOTS - GRAPHICS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
+            <div className="resp-2col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
               
               {/* Funnel de Ventas Interactivo Custom */}
               <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
@@ -1049,7 +1082,7 @@ export default function App() {
             </div>
 
             {/* SECOND ROW PLOT: SALES PERFORMANCE */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2rem' }}>
+            <div className="resp-2col" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2rem' }}>
               
               {/* Desempeño por Vendedor */}
               <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
@@ -1512,7 +1545,7 @@ export default function App() {
         {/* VIEW 5: DATAVERSE INTEGRATION VIEW */}
         {/* ============================================================== */}
         {view === 'Dataverse' && (
-          <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '2rem' }}>
+          <div className="animate-fade-in resp-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '2rem' }}>
             
             {/* Formulario de Configuración */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1805,13 +1838,14 @@ export default function App() {
           zIndex: 3000,
           backdropFilter: 'blur(6px)'
         }}>
-          <div className="glass animate-fade-in" style={{ 
-            width: '750px', 
-            maxHeight: '92vh', 
-            overflowY: 'auto', 
-            padding: '2.5rem', 
-            borderRadius: '16px', 
-            position: 'relative' 
+          <div className="glass animate-fade-in" style={{
+            width: isMobile ? '94vw' : '750px',
+            maxWidth: '94vw',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            padding: isMobile ? '1.4rem' : '2.5rem',
+            borderRadius: '16px',
+            position: 'relative'
           }}>
             {/* CLOSE BUTTON */}
             <button 
@@ -1827,7 +1861,7 @@ export default function App() {
             </h2>
 
             {/* FORM */}
-            <form onSubmit={handleSaveOpportunity} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
+            <form onSubmit={handleSaveOpportunity} className="resp-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
               
               <div>
                 <label>Código Oportunidad (Lectura)</label>
