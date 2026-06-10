@@ -78,11 +78,17 @@ function mapToOData(op) {
     cr168_contactandphone: `${op.contactoName || ''} - ${op.contactoPhone || ''}`,
     cr168_businessline: op.lineaNegocio,
     cr168_estimatedamount: Number(op.monto || 0),
-    cr168_closeprobability: parseFloat(op.probabilidad) || 0.5,
+    cr168_closeprobability: (parseFloat(op.probabilidad) || 50) / 100,
     cr168_salesstage: STAGE_TO_INT[op.etapa] ?? 0,
     cr168_nextaction: op.proximaAccion,
     cr168_nextactiondate: op.fechaAccion ? `${op.fechaAccion}T00:00:00Z` : null,
-    cr168_responsibleperson: op.responsable
+    cr168_responsibleperson: op.responsable,
+    cr168_followupnotes: op.notas || '',
+    cr168_contactemail: op.contactoEmail || '',
+    cr168_clienttype: op.tipoCliente || '',
+    cr168_entrydate: op.fechaIngreso || null,
+    cr168_dealstatus: op.estado || '',
+    cr168_lossreason: op.motivoPerdida || ''
   };
 }
 
@@ -92,22 +98,22 @@ function mapFromOData(odata) {
     codigo: odata.cr168_opportunitycode || 'OP-MIG-' + Math.floor(100 + Math.random() * 900),
     cliente: odata.cr168_clientorcompany || 'Cliente Sin Nombre',
     contactoName: odata.cr168_contactandphone ? odata.cr168_contactandphone.split(' - ')[0] : '',
-    contactoEmail: '',
+    contactoEmail: odata.cr168_contactemail || '',
     contactoPhone: odata.cr168_contactandphone?.includes(' - ') ? odata.cr168_contactandphone.split(' - ')[1] : '',
-    tipoCliente: 'Privado',
+    tipoCliente: odata.cr168_clienttype || 'Privado',
     lineaNegocio: odata.cr168_businessline || 'CAM SCI',
     proyecto: '',
     monto: Number(odata.cr168_estimatedamount || 0),
     margen: 0,
-    probabilidad: odata.cr168_closeprobability ? `${odata.cr168_closeprobability * 100}%` : '50%',
+    probabilidad: odata.cr168_closeprobability ? `${Math.round(odata.cr168_closeprobability * 100)}%` : '50%',
     etapa: INT_TO_STAGE[odata.cr168_salesstage] || 'Prospección',
     proximaAccion: odata.cr168_nextaction || 'Llamada',
     fechaAccion: odata.cr168_nextactiondate ? odata.cr168_nextactiondate.split('T')[0] : '',
     responsable: odata.cr168_responsibleperson || 'Arturo Mora',
-    estado: 'Abierta',
-    motivoPerdida: '',
-    fechaIngreso: new Date().toISOString().split('T')[0],
-    notas: ''
+    estado: odata.cr168_dealstatus || 'Abierta',
+    motivoPerdida: odata.cr168_lossreason || '',
+    fechaIngreso: odata.cr168_entrydate ? odata.cr168_entrydate.split('T')[0] : new Date().toISOString().split('T')[0],
+    notas: odata.cr168_followupnotes || ''
   };
 }
 
