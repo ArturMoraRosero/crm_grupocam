@@ -25,6 +25,19 @@ function pushLog(method, url, status, requestBody = null, responseBody = null) {
 
 const ENTITY_NAME = 'cr168_visitses';
 
+// Extrae el mensaje de error real que Dataverse devuelve en el cuerpo.
+// (response.statusText viene vacío en HTTP/2, por eso antes no se veía la causa.)
+function parseDataverseError(status, errText) {
+  let detail = '';
+  try {
+    const parsed = JSON.parse(errText || '{}');
+    detail = parsed?.error?.message || parsed?.Message || '';
+  } catch {
+    detail = errText || '';
+  }
+  return `HTTP ${status}${detail ? ` — ${detail}` : ''}`;
+}
+
 // ── Campo mapping: app → OData ──────────────────────────────────────────────
 
 function mapToOData(v) {
@@ -141,8 +154,10 @@ export async function fetchVisits(localData = []) {
     });
     if (!response.ok) {
       const errText = await response.text();
-      pushLog('GET', endpoint, `${response.status} ${response.statusText}`, null, JSON.parse(errText || '{}'));
-      throw new Error(`Fetch visits failed: ${response.statusText}`);
+      let parsedBody = {};
+      try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
+      pushLog('GET', endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
+      throw new Error(`Fetch visits failed: ${parseDataverseError(response.status, errText)}`);
     }
     const data = await response.json();
     pushLog('GET', endpoint, '200 OK', null, data);
@@ -184,8 +199,10 @@ export async function sendVisit(visit, isNew = false) {
     });
     if (!response.ok) {
       const errText = await response.text();
-      pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, JSON.parse(errText || '{}'));
-      throw new Error(`Visit sync failed: ${response.statusText}`);
+      let parsedBody = {};
+      try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
+      pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
+      throw new Error(`Visit sync failed: ${parseDataverseError(response.status, errText)}`);
     }
     const status = isNew ? '201 Created' : '204 No Content';
     let responseData = null;
