@@ -142,6 +142,19 @@ export default function App() {
     }
   }, []);
 
+  // Auto-login SSO silencioso: si el usuario ya tiene sesión M365 activa, obtiene el
+  // token automáticamente al cargar (sin clic ni pantalla de login). Si no hay sesión,
+  // Microsoft regresa con error, marcamos 'sso_silent_failed' y se muestra el botón manual.
+  // Las banderas en sessionStorage evitan cualquier bucle de redirección.
+  useEffect(() => {
+    const settings = getSettings();
+    if (settings.mode !== 'live' || settings.authMethod !== 'sso') return;
+    if (getActiveToken()) return;                               // ya autenticado
+    if (sessionStorage.getItem('sso_silent_failed')) return;    // requiere inicio manual
+    if (sessionStorage.getItem('sso_silent_attempted')) return; // evita reintento en bucle
+    loginMicrosoft({ silent: true });
+  }, []);
+
   // Auto-fetch opportunities in live mode if authenticated
   useEffect(() => {
     const settings = getSettings();
@@ -547,6 +560,10 @@ export default function App() {
   // Logout interactive user from Microsoft
   const handleLogoutMicrosoft = () => {
     sessionStorage.removeItem('dataverse_oauth_token');
+    // Marcamos que el reintento silencioso queda deshabilitado hasta un inicio manual,
+    // para que cerrar sesión no dispare un auto-login inmediato.
+    sessionStorage.setItem('sso_silent_failed', '1');
+    sessionStorage.removeItem('sso_silent_attempted');
     setActiveMsalToken(null);
     triggerToast('🔴 Sesión de Microsoft cerrada.');
   };

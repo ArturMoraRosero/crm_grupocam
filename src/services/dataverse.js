@@ -117,18 +117,31 @@ function mapFromOData(odata) {
   };
 }
 
-export function loginMicrosoft() {
+export function loginMicrosoft(options = {}) {
+  // options.silent === true  => intento de SSO silencioso (prompt=none): si el usuario
+  // ya tiene sesión M365 activa, devuelve el token sin mostrar pantalla de login.
+  // Si no hay sesión, Microsoft regresa con #error=... y caemos al inicio manual.
+  const silent = options && options.silent === true;
   const settings = getSettings();
   const redirectUri = window.location.origin + '/';
-  const authUrl = `https://login.microsoftonline.com/${settings.tenantId}/oauth2/v2.0/authorize?` + new URLSearchParams({
+  const params = {
     client_id: settings.clientId,
     response_type: 'token',
     redirect_uri: redirectUri,
     scope: `${settings.envUrl}/user_impersonation`,
     state: 'grupocam_crm_auth_state'
-  }).toString();
-  pushLog('SYSTEM', 'Redirigiendo a Microsoft Entra ID para SSO...', '302 Found');
-  setTimeout(() => { window.location.href = authUrl; }, 200);
+  };
+  if (silent) {
+    params.prompt = 'none';
+    sessionStorage.setItem('sso_silent_attempted', '1');
+  }
+  const authUrl = `https://login.microsoftonline.com/${settings.tenantId}/oauth2/v2.0/authorize?` + new URLSearchParams(params).toString();
+  pushLog('SYSTEM', silent ? 'Renovando sesión SSO en silencio...' : 'Redirigiendo a Microsoft Entra ID para SSO...', '302 Found');
+  if (silent) {
+    window.location.href = authUrl;
+  } else {
+    setTimeout(() => { window.location.href = authUrl; }, 200);
+  }
 }
 
 export function getActiveToken() {
@@ -150,12 +163,25 @@ export function checkForRedirectToken() {
   const params = new URLSearchParams(hash.substring(1));
   const accessToken = params.get('access_token');
   const expiresIn = params.get('expires_in');
+  const error = params.get('error');
   if (accessToken) {
     const expiryTime = Date.now() + parseInt(expiresIn || '3600', 10) * 1000;
     sessionStorage.setItem('dataverse_oauth_token', JSON.stringify({ token: accessToken, expiryTime }));
+    // Sesión obtenida: limpiamos las banderas de control del intento silencioso.
+    sessionStorage.removeItem('sso_silent_failed');
+    sessionStorage.removeItem('sso_silent_attempted');
     window.history.replaceState(null, null, window.location.pathname + window.location.search);
     pushLog('SYSTEM', 'Token SSO Microsoft obtenido', '200 OK');
     return accessToken;
+  }
+  if (error) {
+    // El intento silencioso falló (login_required / interaction_required): no hay sesión
+    // activa o se requiere interacción. Marcamos para no reintentar en bucle y mostrar
+    // el botón de inicio manual.
+    sessionStorage.setItem('sso_silent_failed', '1');
+    window.history.replaceState(null, null, window.location.pathname + window.location.search);
+    pushLog('SYSTEM', `SSO silencioso no disponible (${error}). Inicio manual requerido.`, '401 Unauthorized');
+    return null;
   }
   return null;
 }
