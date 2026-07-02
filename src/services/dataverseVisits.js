@@ -35,6 +35,23 @@ function isValidGuid(id) {
   return typeof id === 'string' && GUID_REGEX.test(id);
 }
 
+// Extrae el GUID real del registro devuelto por Dataverse sin depender de
+// adivinar el nombre exacto de la columna primaria (cr168_visitid puede no
+// coincidir con el nombre real que Dataverse generó para la tabla).
+// Antes, si el nombre no coincidía, cada GET generaba un id local aleatorio
+// distinto para el MISMO registro: borrar "funcionaba" (se quitaba el id
+// falso de turno) pero al refrescar, un id falso nuevo volvía a traer el
+// registro — nunca se borraba de verdad en Dataverse.
+function extractPrimaryId(o) {
+  if (isValidGuid(o.cr168_visitid)) return o.cr168_visitid;
+  // Los lookups en la Web API de Dataverse vienen como "_campo_value", nunca
+  // terminan en "id" — así que cualquier propiedad que termine en "id" (sin
+  // guion bajo inicial) y tenga forma de GUID es, en la práctica, la clave
+  // primaria real de la tabla.
+  const candidate = Object.keys(o).find(k => /id$/i.test(k) && !k.startsWith('_') && isValidGuid(o[k]));
+  return candidate ? o[candidate] : null;
+}
+
 // Extrae el mensaje de error real que Dataverse devuelve en el cuerpo.
 // (response.statusText viene vacío en HTTP/2, por eso antes no se veía la causa.)
 function parseDataverseError(status, errText) {
@@ -109,8 +126,9 @@ function mapToOData(v) {
 
 function mapFromOData(o) {
   const dt = o.cr168_visitdatetime;
+  const realId = extractPrimaryId(o);
   return {
-    id: o.cr168_visitid || 'visit_' + Math.random().toString(36).substr(2, 9),
+    id: realId || 'visit_' + Math.random().toString(36).substr(2, 9),
     fecha: dt ? dt.split('T')[0] : '',
     hora: dt ? dt.split('T')[1]?.slice(0, 5) : '',
     ejecutivo: o.cr168_executive || '',

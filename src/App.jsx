@@ -946,7 +946,11 @@ export default function App() {
       )}
 
       {/* MAIN CONTAINER CONTENT */}
-      <main style={{ flex: 1, padding: isMobile ? '4.5rem 1rem 1.5rem' : '2.5rem', overflowY: 'auto', width: isMobile ? '100%' : 'auto', minWidth: 0 }}>
+      {/* Padding inferior extra: el badge flotante de Dataverse (fixed, bottom-right)
+          se superponía a los botones de acción (editar/borrar) de la última fila
+          en tablas y listas, bloqueando el clic. Reservamos espacio para que
+          ninguna fila quede detrás del badge. */}
+      <main style={{ flex: 1, padding: isMobile ? '4.5rem 1rem 6.5rem' : '2.5rem 2.5rem 7rem 2.5rem', overflowY: 'auto', width: isMobile ? '100%' : 'auto', minWidth: 0 }}>
         
         {/* HEADER BAR AND TOOLS */}
         <header style={{ 
