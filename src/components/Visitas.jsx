@@ -669,6 +669,8 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       setEditingVisit(null);
       if (isDemo) {
         triggerToast(`🧪 ${isNew ? 'Visita registrada' : 'Visita actualizada'} solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+      } else if (saved?._opportunityLinkDropped) {
+        triggerToast('⚠️ Visita guardada, pero no se pudo vincular a la oportunidad (revisar el nombre del lookup en Dataverse). Los demás datos sí se guardaron.', '#fbbf24');
       } else {
         triggerToast(isNew ? '📍 Visita registrada y sincronizada con Dataverse.' : '✅ Visita actualizada y sincronizada con Dataverse.');
       }

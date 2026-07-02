@@ -62,6 +62,11 @@ function parseDataverseError(status, errText) {
   } catch {
     detail = errText || '';
   }
+  // Dataverse a veces mete el stack trace completo de .NET dentro de
+  // error.message (cientos de caracteres "at Microsoft.OData...."). Cortamos
+  // ahí para no volcarle a Silvana una traza técnica ilegible en el toast.
+  const traceIdx = detail.search(/\s(at|en)\s+(Microsoft|System)\./);
+  if (traceIdx > 0) detail = detail.slice(0, traceIdx).trim();
   return `HTTP ${status}${detail ? ` — ${detail}` : ''}`;
 }
 
@@ -110,6 +115,11 @@ function mapToOData(v) {
     payload.cr168_closeprobability = parseFloat(v.probabilidadCierre) || 0;
   }
 
+  // Monto estimado
+  if (v.montoEstimado) {
+    payload.cr168_estimatedamount = parseFloat(v.montoEstimado) || 0;
+  }
+
   // Lookup — formato OData bind (evita error 400 con Currency/Lookup).
   // Solo se envía si oportunidadId es un GUID real: los 5 tratos que aún
   // viven solo en localStorage (op_xxxxx) generarían aquí un bind inválido
@@ -119,6 +129,15 @@ function mapToOData(v) {
       `/cr168_salesopportunities(${v.oportunidadId})`;
   }
 
+  // CRÍTICO: Filtrar propiedades null/undefined que Dataverse rechaza.
+  // Cuando se sincroniza entre computadoras con datos incompletos,
+  // OData puede generar "Error in query syntax" si hay campos sin valor.
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === null || payload[key] === undefined || payload[key] === '') {
+      delete payload[key];
+    }
+  });
+
   return payload;
 }
 
@@ -127,6 +146,11 @@ function mapToOData(v) {
 function mapFromOData(o) {
   const dt = o.cr168_visitdatetime;
   const realId = extractPrimaryId(o);
+
+  // Lookup de oportunidad: Dataverse devuelve los lookups como "_fieldname_value"
+  // en GET, pero los acepta como "fieldname@odata.bind" en POST/PATCH.
+  const opId = o._cr168_opportunityref_value || o.cr168_opportunityref || null;
+
   return {
     id: realId || 'visit_' + Math.random().toString(36).substr(2, 9),
     fecha: dt ? dt.split('T')[0] : '',
@@ -155,7 +179,7 @@ function mapFromOData(o) {
     observaciones: o.cr168_observations || '',
     proyectos: o.cr168_projects ? o.cr168_projects.split(',').filter(Boolean) : [],
     productos: o.cr168_products ? o.cr168_products.split(',').filter(Boolean) : [],
-    oportunidadId: o.cr168_opportunityref || null,
+    oportunidadId: opId || null,
     fechaRegistro: new Date().toISOString().split('T')[0]
   };
 }
@@ -216,35 +240,68 @@ export async function sendVisit(visit, isNew = false) {
   }
 
   const token = await authenticateOAuth();
-  const payload = mapToOData(visit);
+  let payload = mapToOData(visit);
   if (effectiveIsNew) delete payload.cr168_visitid;
-  pushLog(method, endpoint, '102 Syncing...', payload);
+
+  const doRequest = (body) => fetch(endpoint, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
+      'OData-MaxVersion': '4.0',
+      'OData-Version': '4.0',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
 
   try {
-    const response = await fetch(endpoint, {
-      method,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json; charset=utf-8',
-        'OData-MaxVersion': '4.0',
-        'OData-Version': '4.0',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(payload)
-    });
+    pushLog(method, endpoint, '102 Syncing...', payload);
+    let response = await doRequest(payload);
+    let linkDropped = false;
+
     if (!response.ok) {
-      const errText = await response.text();
+      let errText = await response.text();
       let parsedBody = {};
       try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
-      pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
-      throw new Error(`Visit sync failed: ${parseDataverseError(response.status, errText)}`);
+
+      // El único vínculo de navegación que enviamos es el de Oportunidad.
+      // Si el ambiente de Dataverse tiene ese lookup con un nombre de
+      // esquema (navigation property) distinto al que asumimos aquí,
+      // Dataverse responde "undeclared property ... only has property
+      // annotations" y rechaza TODO el registro — incluyendo los demás
+      // campos de la visita que no tienen nada que ver con el lookup.
+      // En vez de bloquear a quien está registrando la visita, reintentamos
+      // una vez sin el vínculo para no perder los datos de campo.
+      const bindKey = 'cr168_opportunityref@odata.bind';
+      const isLookupBindError = payload[bindKey] &&
+        /undeclared property/i.test(parsedBody?.error?.message || errText || '');
+
+      if (isLookupBindError) {
+        pushLog(method, endpoint, `${response.status} ${response.statusText} (vínculo a oportunidad rechazado por Dataverse, reintentando sin él)`, null, parsedBody);
+        const retryPayload = { ...payload };
+        delete retryPayload[bindKey];
+        payload = retryPayload;
+        linkDropped = true;
+        response = await doRequest(retryPayload);
+      }
+
+      if (!response.ok) {
+        errText = await response.text();
+        try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
+        pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
+        throw new Error(`Visit sync failed: ${parseDataverseError(response.status, errText)}`);
+      }
     }
+
     const status = effectiveIsNew ? '201 Created' : '204 No Content';
     let responseData = null;
     if (response.status !== 204) responseData = await response.json();
     pushLog(method, endpoint, status, null, responseData);
-    return responseData ? mapFromOData(responseData) : visit;
+    const result = responseData ? mapFromOData(responseData) : { ...visit };
+    if (linkDropped) result._opportunityLinkDropped = true;
+    return result;
   } catch (e) {
     pushLog(method, endpoint, `500 Sync Error: ${e.message}`);
     throw e;
