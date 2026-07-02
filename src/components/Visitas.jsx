@@ -619,17 +619,24 @@ export default function Visitas({ opportunities = [], triggerToast }) {
   const handleSave = async (form) => {
     setIsSaving(true);
     try {
+      const localId = form.id; // puede ser un id local tipo 'visit_...' o un GUID real
       const isNew = !form.id;
       const toSave = isNew
         ? { ...form, id: 'visit_' + Date.now(), fechaRegistro: new Date().toISOString().split('T')[0] }
         : form;
 
-      await sendVisit(toSave, isNew);
+      // sendVisit devuelve el registro con el id real (GUID) que asigna
+      // Dataverse. Si no se usa esta respuesta, un registro que aún no
+      // tenía GUID (creado offline o cuya sync anterior falló) se queda
+      // para siempre con su id local, y cada "edición" posterior vuelve a
+      // crear un duplicado en Dataverse en vez de actualizar el existente.
+      const saved = await sendVisit(toSave, isNew);
+      const finalVisit = saved && saved.id ? saved : toSave;
 
       setVisits(prev =>
         isNew
-          ? [toSave, ...prev]
-          : prev.map(v => v.id === toSave.id ? toSave : v)
+          ? [finalVisit, ...prev]
+          : prev.map(v => v.id === localId ? finalVisit : v)
       );
       setShowForm(false);
       setEditingVisit(null);

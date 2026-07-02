@@ -25,6 +25,16 @@ function pushLog(method, url, status, requestBody = null, responseBody = null) {
 
 const ENTITY_NAME = 'cr168_visitses';
 
+// Un id real de Dataverse siempre es un GUID. Los registros creados en el
+// navegador antes de sincronizar (o que nunca lograron sincronizar) llevan
+// ids locales tipo 'visit_1751393100000', que NO son válidos en una URL
+// OData — enviarlos genera "400 Error in query syntax" tanto en PATCH
+// como en DELETE. Esta función distingue uno de otro.
+const GUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidGuid(id) {
+  return typeof id === 'string' && GUID_REGEX.test(id);
+}
+
 // Extrae el mensaje de error real que Dataverse devuelve en el cuerpo.
 // (response.statusText viene vacío en HTTP/2, por eso antes no se veía la causa.)
 function parseDataverseError(status, errText) {
@@ -83,8 +93,11 @@ function mapToOData(v) {
     payload.cr168_closeprobability = parseFloat(v.probabilidadCierre) || 0;
   }
 
-  // Lookup — formato OData bind (evita error 400 con Currency/Lookup)
-  if (v.oportunidadId) {
+  // Lookup — formato OData bind (evita error 400 con Currency/Lookup).
+  // Solo se envía si oportunidadId es un GUID real: los 5 tratos que aún
+  // viven solo en localStorage (op_xxxxx) generarían aquí un bind inválido
+  // y el mismo "Error in query syntax".
+  if (v.oportunidadId && isValidGuid(v.oportunidadId)) {
     payload['cr168_opportunityref@odata.bind'] =
       `/cr168_salesopportunities(${v.oportunidadId})`;
   }
@@ -171,17 +184,22 @@ export async function fetchVisits(localData = []) {
 export async function sendVisit(visit, isNew = false) {
   const settings = getSettings();
   const baseUrl = `${settings.envUrl}/api/data/v9.2/${ENTITY_NAME}`;
-  const endpoint = isNew ? baseUrl : `${baseUrl}(${visit.id})`;
-  const method = isNew ? 'POST' : 'PATCH';
+
+  // Si el llamador cree que es una edición (isNew=false) pero el id no es un
+  // GUID de Dataverse, en realidad es un registro que nunca se sincronizó.
+  // Forzamos POST (crear) en vez de PATCH a una URL con id inválido.
+  const effectiveIsNew = isNew || !isValidGuid(visit.id);
+  const endpoint = effectiveIsNew ? baseUrl : `${baseUrl}(${visit.id})`;
+  const method = effectiveIsNew ? 'POST' : 'PATCH';
 
   if (settings.mode !== 'live') {
-    pushLog(method, endpoint, isNew ? '201 Created (Demo)' : '204 Updated (Demo)');
+    pushLog(method, endpoint, effectiveIsNew ? '201 Created (Demo)' : '204 Updated (Demo)');
     return visit;
   }
 
   const token = await authenticateOAuth();
   const payload = mapToOData(visit);
-  if (isNew) delete payload.cr168_visitid;
+  if (effectiveIsNew) delete payload.cr168_visitid;
   pushLog(method, endpoint, '102 Syncing...', payload);
 
   try {
@@ -204,7 +222,7 @@ export async function sendVisit(visit, isNew = false) {
       pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
       throw new Error(`Visit sync failed: ${parseDataverseError(response.status, errText)}`);
     }
-    const status = isNew ? '201 Created' : '204 No Content';
+    const status = effectiveIsNew ? '201 Created' : '204 No Content';
     let responseData = null;
     if (response.status !== 204) responseData = await response.json();
     pushLog(method, endpoint, status, null, responseData);
@@ -217,6 +235,15 @@ export async function sendVisit(visit, isNew = false) {
 
 export async function removeVisit(id) {
   const settings = getSettings();
+
+  // Registro que nunca llegó a Dataverse (id local, no GUID): no hay nada que
+  // borrar remotamente. Antes esto disparaba un DELETE a una URL inválida y
+  // Dataverse respondía 400 "Error in query syntax", bloqueando el borrado.
+  if (!isValidGuid(id)) {
+    pushLog('DELETE', `${ENTITY_NAME}(${id})`, '204 Deleted (local-only, nunca sincronizado)');
+    return true;
+  }
+
   const endpoint = `${settings.envUrl}/api/data/v9.2/${ENTITY_NAME}(${id})`;
 
   if (settings.mode !== 'live') {
