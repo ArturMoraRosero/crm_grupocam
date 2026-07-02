@@ -124,8 +124,15 @@ function mapToOData(v) {
   // Solo se envía si oportunidadId es un GUID real: los 5 tratos que aún
   // viven solo en localStorage (op_xxxxx) generarían aquí un bind inválido
   // y el mismo "Error in query syntax".
+  //
+  // OJO: el navigation property de Dataverse para este lookup es
+  // 'cr168_OpportunityRef' (con mayúsculas, igual al SchemaName), NO
+  // 'cr168_opportunityref' (LogicalName en minúsculas). Confirmado contra
+  // EntityDefinitions(...)/ManyToOneRelationships — Dataverse los trata como
+  // nombres distintos en el payload OData y rechaza el que no coincide
+  // exactamente con "undeclared property".
   if (v.oportunidadId && isValidGuid(v.oportunidadId)) {
-    payload['cr168_opportunityref@odata.bind'] =
+    payload['cr168_OpportunityRef@odata.bind'] =
       `/cr168_salesopportunities(${v.oportunidadId})`;
   }
 
@@ -274,7 +281,7 @@ export async function sendVisit(visit, isNew = false) {
       // campos de la visita que no tienen nada que ver con el lookup.
       // En vez de bloquear a quien está registrando la visita, reintentamos
       // una vez sin el vínculo para no perder los datos de campo.
-      const bindKey = 'cr168_opportunityref@odata.bind';
+      const bindKey = 'cr168_OpportunityRef@odata.bind';
       const isLookupBindError = payload[bindKey] &&
         /undeclared property/i.test(parsedBody?.error?.message || errText || '');
 
