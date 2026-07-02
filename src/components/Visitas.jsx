@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { fetchVisits, sendVisit, removeVisit } from '../services/dataverseVisits';
+import { getSettings } from '../services/dataverse';
 import { LINEAS_NEGOCIO, USUARIOS } from '../mockData';
+
+// Mismo indicador que en App.jsx: sin esto, una visita guardada en Modo Demo
+// se ve idéntica a una que sí llegó a Dataverse, y otros usuarios no la ven.
+function SyncBadge({ status }) {
+  if (status === 'demo') {
+    return (
+      <span
+        title="Modo Demo: esta visita nunca se envió a Dataverse ni es visible para otros usuarios."
+        style={{
+          fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, marginLeft: 6,
+          background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)',
+          whiteSpace: 'nowrap', cursor: 'help'
+        }}
+      >
+        🧪 Solo local (Demo)
+      </span>
+    );
+  }
+  return null;
+}
 
 // ── Catálogos locales ────────────────────────────────────────────────────────
 
@@ -579,10 +600,15 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       try { return JSON.parse(localStorage.getItem('crm_visits') || '[]'); } catch { return []; }
     })();
     setIsSyncing(true);
+    const isLive = getSettings().mode === 'live';
     fetchVisits(localData)
       .then(data => {
-        setVisits(data);
-        localStorage.setItem('crm_visits', JSON.stringify(data));
+        // Si vino de Dataverse (modo live), es la fuente compartida: se marca
+        // 'synced'. Si estamos en Demo, fetchVisits devuelve el mismo
+        // localData de entrada — no le pisamos su _syncStatus previo.
+        const tagged = isLive ? data.map(v => ({ ...v, _syncStatus: 'synced' })) : data;
+        setVisits(tagged);
+        localStorage.setItem('crm_visits', JSON.stringify(tagged));
       })
       .catch(() => {})
       .finally(() => setIsSyncing(false));
@@ -630,8 +656,9 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       // tenía GUID (creado offline o cuya sync anterior falló) se queda
       // para siempre con su id local, y cada "edición" posterior vuelve a
       // crear un duplicado en Dataverse en vez de actualizar el existente.
+      const isDemo = getSettings().mode !== 'live';
       const saved = await sendVisit(toSave, isNew);
-      const finalVisit = saved && saved.id ? saved : toSave;
+      const finalVisit = { ...(saved && saved.id ? saved : toSave), _syncStatus: isDemo ? 'demo' : 'synced' };
 
       setVisits(prev =>
         isNew
@@ -640,7 +667,11 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       );
       setShowForm(false);
       setEditingVisit(null);
-      triggerToast(isNew ? '📍 Visita registrada correctamente.' : '✅ Visita actualizada.');
+      if (isDemo) {
+        triggerToast(`🧪 ${isNew ? 'Visita registrada' : 'Visita actualizada'} solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+      } else {
+        triggerToast(isNew ? '📍 Visita registrada y sincronizada con Dataverse.' : '✅ Visita actualizada y sincronizada con Dataverse.');
+      }
     } catch (e) {
       triggerToast(`❌ Error al guardar: ${e.message}`, 'rgba(192,57,43,0.5)');
     } finally {
@@ -821,6 +852,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: PRIORITY_COLOR[v.prioridad] || '#888', flexShrink: 0 }} />
                   <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>{v.nombreProyecto || '—'}</span>
+                  <SyncBadge status={v._syncStatus} />
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2, paddingLeft: 16 }}>
                   {v.fecha} {v.sector ? `· ${v.sector}` : ''} {v.monto ? `· $${Number(v.montoEstimado).toLocaleString()}` : ''}

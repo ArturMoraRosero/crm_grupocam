@@ -20,6 +20,42 @@ const ROLES = [
   { name: 'Consultor Estratégico', id: 'Admin', user: 'Arturo Mora' }
 ];
 
+// Indicador visual de estado real de sincronización con Dataverse.
+// Sin esto, un guardado que solo quedó en el navegador (Modo Demo, sesión
+// SSO vencida, sin permisos, etc.) se ve idéntico a uno que sí llegó al
+// backend compartido — y otros usuarios simplemente no ven el registro.
+function SyncBadge({ status }) {
+  if (status === 'error') {
+    return (
+      <span
+        title="No se pudo sincronizar con Dataverse. Este registro solo existe en este navegador — otros usuarios no lo verán hasta reintentar la sincronización."
+        style={{
+          fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, marginLeft: 6,
+          background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.4)',
+          whiteSpace: 'nowrap', cursor: 'help'
+        }}
+      >
+        ⚠ No sincronizado
+      </span>
+    );
+  }
+  if (status === 'demo') {
+    return (
+      <span
+        title="La app está en Modo Demo / Simulación Local. Este registro nunca se envía a Dataverse ni es visible para otros usuarios."
+        style={{
+          fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, marginLeft: 6,
+          background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)',
+          whiteSpace: 'nowrap', cursor: 'help'
+        }}
+      >
+        🧪 Solo local (Demo)
+      </span>
+    );
+  }
+  return null;
+}
+
 export default function App() {
   // Views navigation: 'Dashboard' | 'Opportunities' | 'Kanban' | 'Visits' | 'Audit' | 'Dataverse'
   const [view, setView] = useState(() => {
@@ -202,6 +238,23 @@ export default function App() {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  // Helper: intenta sincronizar una oportunidad con Dataverse y devuelve el
+  // registro con un _syncStatus real ('synced' | 'demo' | 'error'), en vez de
+  // asumir éxito solo porque se guardó en el estado local del navegador.
+  const syncOpportunityRecord = async (op, isNew) => {
+    const settings = getSettings();
+    if (settings.mode !== 'live') {
+      return { record: { ...op, _syncStatus: 'demo' }, ok: true, demo: true };
+    }
+    try {
+      const resultOp = await sendOpportunity(op, isNew);
+      const merged = resultOp && resultOp.id ? resultOp : op;
+      return { record: { ...merged, _syncStatus: 'synced' }, ok: true };
+    } catch (e) {
+      return { record: { ...op, _syncStatus: 'error' }, ok: false, error: e };
+    }
+  };
+
   // Role Filtering Rules
   const visibleOpportunities = opportunities.filter(op => {
     if (activeRole === 'Vendedor') {
@@ -355,17 +408,18 @@ export default function App() {
 
       updatedList = opportunities.map(o => o.id === currentOp.id ? savedOp : o);
       setOpportunities(updatedList);
-      
+
       logAudit('Edición', currentOp.codigo, changes.length > 0 ? changes.join(', ') : 'Modificación general de datos');
-      
-      try {
-        const resultOp = await sendOpportunity(savedOp, false);
-        if (resultOp && resultOp.id) {
-          setOpportunities(prev => prev.map(o => o.id === currentOp.id ? resultOp : o));
-        }
+
+      const { record, ok, demo, error } = await syncOpportunityRecord(savedOp, false);
+      setOpportunities(prev => prev.map(o => o.id === currentOp.id ? record : o));
+
+      if (ok && !demo) {
         triggerToast(`✅ Oportunidad ${currentOp.codigo} actualizada y sincronizada con Dataverse.`);
-      } catch (e) {
-        triggerToast(`⚠️ Guardado localmente. Error de sincronización Dataverse: ${e.message}`, '#fbbf24');
+      } else if (demo) {
+        triggerToast(`🧪 ${currentOp.codigo} actualizada solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+      } else {
+        triggerToast(`⚠️ No se pudo sincronizar con Dataverse — quedó solo en este navegador: ${error?.message || ''}`, '#f87171');
       }
     } else {
       // CREATION
@@ -376,20 +430,21 @@ export default function App() {
         monto: numericMonto,
         margen: numericMargen
       };
-      
+
       updatedList = [...opportunities, savedOp];
       setOpportunities(updatedList);
-      
+
       logAudit('Creación', savedOp.codigo, `Registrada para ${savedOp.cliente} por un monto de $${numericMonto}`);
-      
-      try {
-        const resultOp = await sendOpportunity(savedOp, true);
-        if (resultOp && resultOp.id) {
-          setOpportunities(prev => prev.map(o => o.id === newId ? resultOp : o));
-        }
+
+      const { record, ok, demo, error } = await syncOpportunityRecord(savedOp, true);
+      setOpportunities(prev => prev.map(o => o.id === newId ? record : o));
+
+      if (ok && !demo) {
         triggerToast(`🎉 Oportunidad ${savedOp.codigo} creada y sincronizada con Dataverse.`);
-      } catch (e) {
-        triggerToast(`⚠️ Creado localmente. Error de sincronización Dataverse: ${e.message}`, '#fbbf24');
+      } else if (demo) {
+        triggerToast(`🧪 ${savedOp.codigo} creada solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+      } else {
+        triggerToast(`⚠️ No se pudo sincronizar con Dataverse — quedó solo en este navegador: ${error?.message || ''}`, '#f87171');
       }
     }
 
@@ -422,11 +477,18 @@ export default function App() {
       
       setOpportunities(prev => prev.map(o => o.id === id ? updatedOp : o));
       logAudit('Transición Kanban', op.codigo, `Etapa comercial movida de ${op.etapa} a ${nextStage}`);
-      
-      triggerToast(`🚀 ${op.codigo} movido a ${nextStage}`);
 
-      // Dataverse Sync
-      await sendOpportunity(updatedOp, false);
+      // Dataverse Sync — reconciliamos con el estado real de sincronización
+      const { record, ok, demo, error } = await syncOpportunityRecord(updatedOp, false);
+      setOpportunities(prev => prev.map(o => o.id === id ? record : o));
+
+      if (ok && !demo) {
+        triggerToast(`🚀 ${op.codigo} movido a ${nextStage}`);
+      } else if (demo) {
+        triggerToast(`🧪 ${op.codigo} movido a ${nextStage} (solo local, Modo Demo).`, '#fbbf24');
+      } else {
+        triggerToast(`⚠️ ${op.codigo} movido a ${nextStage} localmente, pero no se sincronizó: ${error?.message || ''}`, '#f87171');
+      }
     }
   };
 
@@ -447,32 +509,49 @@ export default function App() {
 
   const handleApplyBulkEdit = async () => {
     if (selectedIds.length === 0) return;
-    
-    let editCount = 0;
-    const updatedOpportunities = opportunities.map(op => {
-      if (selectedIds.includes(op.id)) {
-        editCount++;
-        const newOp = { ...op };
-        if (bulkStage) newOp.etapa = bulkStage;
-        if (bulkOwner) newOp.responsable = bulkOwner;
-        if (bulkBusinessLine) newOp.lineaNegocio = bulkBusinessLine;
-        
-        // Sync each background
-        sendOpportunity(newOp, false);
-        return newOp;
-      }
-      return op;
-    });
 
-    setOpportunities(updatedOpportunities);
-    
-    const auditMsg = `Edición masiva de ${editCount} registros: ` + 
+    const targets = opportunities.filter(op => selectedIds.includes(op.id));
+    const editCount = targets.length;
+
+    // Optimista: reflejamos el cambio de inmediato en pantalla.
+    const optimistic = opportunities.map(op => {
+      if (!selectedIds.includes(op.id)) return op;
+      const newOp = { ...op };
+      if (bulkStage) newOp.etapa = bulkStage;
+      if (bulkOwner) newOp.responsable = bulkOwner;
+      if (bulkBusinessLine) newOp.lineaNegocio = bulkBusinessLine;
+      return newOp;
+    });
+    setOpportunities(optimistic);
+
+    // Sincronizamos cada uno con Dataverse y reconciliamos el estado real.
+    const results = await Promise.all(
+      optimistic
+        .filter(op => selectedIds.includes(op.id))
+        .map(op => syncOpportunityRecord(op, false))
+    );
+
+    setOpportunities(prev => prev.map(o => {
+      if (!selectedIds.includes(o.id)) return o;
+      return results.find(r => r.record.id === o.id)?.record || o;
+    }));
+
+    const failed = results.filter(r => !r.ok).length;
+    const demoCount = results.filter(r => r.demo).length;
+
+    const auditMsg = `Edición masiva de ${editCount} registros: ` +
       [bulkStage && `Etapa → ${bulkStage}`, bulkOwner && `Propietario → ${bulkOwner}`, bulkBusinessLine && `Línea → ${bulkBusinessLine}`]
       .filter(Boolean).join(', ');
 
     logAudit('Acción Masiva', 'Varios', auditMsg);
-    
-    triggerToast(`⚡ Se actualizaron ${editCount} oportunidades en lote con éxito.`);
+
+    if (demoCount === editCount) {
+      triggerToast(`🧪 Se actualizaron ${editCount} oportunidades solo en este navegador (Modo Demo).`, '#fbbf24');
+    } else if (failed > 0) {
+      triggerToast(`⚠️ ${editCount - failed}/${editCount} sincronizadas con Dataverse. ${failed} quedaron solo locales — revisa conexión/sesión.`, '#f87171');
+    } else {
+      triggerToast(`⚡ Se actualizaron ${editCount} oportunidades en lote y se sincronizaron con Dataverse.`);
+    }
     setSelectedIds([]);
     setBulkStage('');
     setBulkOwner('');
@@ -505,8 +584,9 @@ export default function App() {
     try {
       const results = await fetchOpportunities(opportunities);
       // Dataverse manda: reemplazamos el estado con lo que devuelva (aunque sea vacío).
+      // Todo lo que viene de aquí es, por definición, la fuente compartida.
       if (Array.isArray(results)) {
-        setOpportunities(results);
+        setOpportunities(results.map(r => ({ ...r, _syncStatus: 'synced' })));
       }
       triggerToast('⚡ Dataverse sincronizado con éxito. Revisa la consola.', 'var(--accent-green)');
     } catch (e) {
@@ -539,12 +619,12 @@ export default function App() {
       }
       try {
         const result = await sendOpportunity({ ...op, id: '' }, true);
-        migrated.push(result || op);
+        migrated.push(result ? { ...result, _syncStatus: 'synced' } : { ...op, _syncStatus: 'synced' });
         if (op.codigo) existingCodes.add(op.codigo); // evita duplicar dentro del mismo lote
         ok++;
         logAudit('Migración Dataverse', op.id, `Trato "${op.cliente}" migrado exitosamente.`);
       } catch (e) {
-        migrated.push(op);
+        migrated.push({ ...op, _syncStatus: 'error' });
         fail++;
       }
     }
@@ -727,6 +807,31 @@ export default function App() {
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
               {activeMsalToken ? 'Sesión SSO Activa' : 'Requiere Inicio de Sesión'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Antes, en Modo Demo no había NINGÚN indicador visual — un usuario podía
+          pasar semanas guardando datos "solo locales" sin darse cuenta de que
+          nunca llegaban a Dataverse ni eran visibles para el resto del equipo. */}
+      {dvSettings.mode !== 'live' && (
+        <div
+          className="glass animate-fade-in"
+          style={{
+            position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+            border: '1px solid rgba(251,191,36,0.5)', borderRadius: '12px',
+            padding: '0.8rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.5)', zIndex: 5000, cursor: 'pointer'
+          }}
+          onClick={() => setView('Dataverse')}
+          title="Ver Ajustes de Dataverse"
+        >
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 10px #fbbf24' }}></div>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>🧪 Modo Demo activo</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+              Tus datos NO se comparten con otros usuarios
             </div>
           </div>
         </div>
@@ -1338,7 +1443,7 @@ export default function App() {
                               style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                             />
                           </td>
-                          <td style={{ fontWeight: 'bold', color: '#fff' }}>{op.codigo}</td>
+                          <td style={{ fontWeight: 'bold', color: '#fff' }}>{op.codigo}<SyncBadge status={op._syncStatus} /></td>
                           <td>
                             <div style={{ fontWeight: '600' }}>{op.cliente}</div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{op.contactoName}</div>
@@ -1436,7 +1541,7 @@ export default function App() {
                               onClick={() => handleEditClick(op)}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '0.78rem', color: 'var(--cam-gray-mid)', fontWeight: 'bold' }}>{op.codigo}</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--cam-gray-mid)', fontWeight: 'bold' }}>{op.codigo}<SyncBadge status={op._syncStatus} /></span>
                                 <span className={`badge ${op.estado === 'Ganada' ? 'badge-won' : 'badge-open'}`} style={{ padding: '2px 6px', fontSize: '0.68rem' }}>
                                   {op.estado}
                                 </span>
@@ -1583,8 +1688,8 @@ export default function App() {
                       value={dvSettings.mode} 
                       onChange={(e) => setDvSettings({ ...dvSettings, mode: e.target.value })}
                     >
-                      <option value="demo">Modo Demo / Simulación Local (Recomendado)</option>
-                      <option value="live">Modo Conexión Real (API Dynamics 365)</option>
+                      <option value="live">Modo Conexión Real (API Dynamics 365) — Recomendado</option>
+                      <option value="demo">Modo Demo / Simulación Local (los datos NO se comparten con otros usuarios)</option>
                     </select>
                   </div>
 
