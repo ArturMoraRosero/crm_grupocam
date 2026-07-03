@@ -48,17 +48,23 @@ export function saveSettings(settings) {
   pushLog('SYSTEM', 'Configuración de Dataverse Guardada', '200 OK', null, settings);
 }
 
+// Mapeo 1:1 con el optionset "Sales Stage" en Dataverse (tabla cr168_salesopportunities).
+// Las 4 etapas 553050006-009 (Diagnóstico técnico, Costeo/stock, Seguimiento, Postventa)
+// se agregaron al optionset el 2026-07-02 para alinear el pipeline de 8 etapas de la app
+// con el backend — antes colapsaban sobre valores existentes y las transiciones se revertían
+// solas al releer la respuesta de Dataverse (ver INT_TO_STAGE).
 const STAGE_TO_INT = {
   'Prospección': 0, 'Prospeccion': 0,
   'Calificación': 553050001, 'Calificacion': 553050001,
-  'Diagnóstico técnico': 553050001, 'Diagnostico tecnico': 553050001,
+  'Diagnóstico técnico': 553050006, 'Diagnostico tecnico': 553050006,
+  'Costeo / stock': 553050007, 'Costeo/stock': 553050007,
   'Propuesta': 553050002,
+  'Seguimiento': 553050008,
   'Negociación': 553050003, 'Negociacion': 553050003,
-  'Seguimiento': 553050003,
   'Cierre': 553050004,
   'Cierre Ganado': 553050004,
   'Cierre Perdido': 553050005,
-  'Postventa': 553050004
+  'Postventa': 553050009
 };
 
 const INT_TO_STAGE = {
@@ -67,7 +73,11 @@ const INT_TO_STAGE = {
   553050002: 'Propuesta',
   553050003: 'Negociación',
   553050004: 'Cierre',
-  553050005: 'Cierre Perdido'
+  553050005: 'Cierre Perdido',
+  553050006: 'Diagnóstico técnico',
+  553050007: 'Costeo / stock',
+  553050008: 'Seguimiento',
+  553050009: 'Postventa'
 };
 
 function mapToOData(op) {
