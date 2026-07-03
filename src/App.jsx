@@ -1075,12 +1075,10 @@ export default function App() {
               )}
             </div>
 
-            {/* BUTTON ADD REAL RECORD */}
-            {activeRole !== 'Vendedor' && (
-              <button className="btn-primary" onClick={handleOpenNewModal} style={{ height: '40px' }}>
-                ➕ Nueva Oportunidad
-              </button>
-            )}
+            {/* BUTTON ADD REAL RECORD — visible para todos los roles, incluido Vendedor (Silvana) */}
+            <button className="btn-primary" onClick={handleOpenNewModal} style={{ height: '40px' }}>
+              ➕ Nueva Oportunidad
+            </button>
           </div>
         </header>
 
