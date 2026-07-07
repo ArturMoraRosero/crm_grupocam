@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchVisits, sendVisit, removeVisit } from '../services/dataverseVisits';
+import { listVisitPhotos, deleteVisitPhoto, uploadVisitPhotos } from '../services/sharepointPhotos';
 import { getSettings } from '../services/dataverse';
 import { LINEAS_NEGOCIO, USUARIOS } from '../mockData';
 
@@ -53,6 +54,7 @@ const EMPTY_VISIT = {
   etapaObra: ETAPAS_OBRA[0],
   lineaNegocio: LINEAS_NEGOCIO[0],
   contacto: '',
+  telefonoContacto: '',
   decisor: DECISORES[0],
   necesidadDetectada: '',
   montoEstimado: '',
@@ -162,16 +164,161 @@ const rowGrid = (cols = 2) => ({
   gap: '1rem', marginBottom: '1rem'
 });
 
+// ── Fotos del proyecto (SharePoint) ──────────────────────────────────────────
+
+const MAX_FOTOS = 5;
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const photoThumbStyle = {
+  width: 92, height: 92, objectFit: 'cover', borderRadius: 8,
+  border: '1px solid var(--border-primary)', display: 'block'
+};
+
+const photoRemoveBtn = {
+  position: 'absolute', top: -6, right: -6, width: 20, height: 20,
+  borderRadius: '50%', background: 'var(--cam-red)', color: '#fff',
+  border: 'none', cursor: 'pointer', fontSize: '0.7rem', lineHeight: 1,
+  display: 'flex', alignItems: 'center', justifyContent: 'center'
+};
+
+function PhotoSection({ visitId, pendingFiles, setPendingFiles }) {
+  const [existing, setExisting] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef(null);
+  const isSynced = GUID_RE.test(visitId || '');
+
+  // Galería existente: solo si la visita ya vive en Dataverse (carpeta = GUID).
+  useEffect(() => {
+    if (!isSynced) return;
+    setLoading(true);
+    listVisitPhotos(visitId)
+      .then(setExisting)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [visitId, isSynced]);
+
+  const total = existing.length + pendingFiles.length;
+
+  const handlePick = (e) => {
+    setError('');
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
+    const room = MAX_FOTOS - total;
+    if (files.length > room) {
+      setError(`Máximo ${MAX_FOTOS} fotos por visita. Solo se agregaron ${Math.max(room, 0)}.`);
+    }
+    const accepted = files.slice(0, Math.max(room, 0)).map(f => ({
+      file: f,
+      preview: URL.createObjectURL(f)
+    }));
+    if (accepted.length) setPendingFiles(prev => [...prev, ...accepted]);
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+  };
+
+  const removePending = (idx) => {
+    setPendingFiles(prev => {
+      URL.revokeObjectURL(prev[idx].preview);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  const removeExisting = async (photo) => {
+    if (!window.confirm(`¿Eliminar "${photo.name}" de SharePoint?`)) return;
+    try {
+      await deleteVisitPhoto(photo.id);
+      setExisting(prev => prev.filter(p => p.id !== photo.id));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <div style={sectionCard}>
+      <div style={{ ...sectionTitle, justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>📸</span> Fotos del proyecto
+          <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, opacity: 0.7 }}>
+            · SharePoint / Visitas CRM · {total}/{MAX_FOTOS}
+          </span>
+        </span>
+        {loading && <span style={{ fontWeight: 400, textTransform: 'none' }}>⏳ Cargando…</span>}
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
+        {/* Fotos ya en SharePoint */}
+        {existing.map(p => (
+          <div key={p.id} style={{ position: 'relative' }}>
+            <a href={p.webUrl} target="_blank" rel="noreferrer" title={`${p.name} — abrir en SharePoint`}>
+              {p.thumbnailUrl
+                ? <img src={p.thumbnailUrl} alt={p.name} style={photoThumbStyle} />
+                : <div style={{ ...photoThumbStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', fontSize: '1.6rem' }}>🖼️</div>
+              }
+            </a>
+            <button type="button" style={photoRemoveBtn} title="Eliminar de SharePoint" onClick={() => removeExisting(p)}>✕</button>
+          </div>
+        ))}
+
+        {/* Fotos pendientes de subir */}
+        {pendingFiles.map((p, idx) => (
+          <div key={p.preview} style={{ position: 'relative' }}>
+            <img src={p.preview} alt={p.file.name} style={{ ...photoThumbStyle, border: '1px dashed #e67e22' }} />
+            <span style={{
+              position: 'absolute', bottom: 4, left: 4, fontSize: '0.6rem', fontWeight: 700,
+              background: 'rgba(230,126,34,0.9)', color: '#fff', padding: '1px 6px', borderRadius: 4
+            }}>Pendiente</span>
+            <button type="button" style={photoRemoveBtn} title="Quitar" onClick={() => removePending(idx)}>✕</button>
+          </div>
+        ))}
+
+        {/* Botón agregar */}
+        {total < MAX_FOTOS && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            style={{
+              width: 92, height: 92, borderRadius: 8, cursor: 'pointer',
+              border: '1px dashed var(--border-primary)', background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)', fontSize: '0.72rem', display: 'flex',
+              flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4
+            }}
+          >
+            <span style={{ fontSize: '1.4rem' }}>＋</span>
+            Agregar foto
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handlePick}
+        />
+      </div>
+
+      {pendingFiles.length > 0 && (
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 10 }}>
+          Las fotos pendientes se suben a SharePoint al guardar la visita.
+        </p>
+      )}
+      {error && (
+        <p style={{ fontSize: '0.78rem', color: '#e67e22', marginTop: 8 }}>⚠️ {error}</p>
+      )}
+    </div>
+  );
+}
+
 // ── Formulario modal ─────────────────────────────────────────────────────────
 
-function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving }) {
+function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLabel }) {
   const [form, setForm] = useState(visit || EMPTY_VISIT);
+  const [pendingPhotos, setPendingPhotos] = useState([]);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    onSave(form, pendingPhotos.map(p => p.file));
   };
 
   return (
@@ -290,7 +437,14 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving }) {
             )}
           </div>
 
-          {/* 3. Información comercial */}
+          {/* 3. Fotos del proyecto */}
+          <PhotoSection
+            visitId={form.id}
+            pendingFiles={pendingPhotos}
+            setPendingFiles={setPendingPhotos}
+          />
+
+          {/* 4. Información comercial */}
           <div style={sectionCard}>
             <div style={sectionTitle}><span>💼</span> Información comercial</div>
             <div style={rowGrid(3)}>
@@ -313,10 +467,14 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving }) {
                 </select>
               </div>
             </div>
-            <div style={rowGrid(2)}>
+            <div style={rowGrid(3)}>
               <div>
                 <label style={labelStyle}>Contacto identificado</label>
                 <input type="text" style={inputStyle} placeholder="Nombre del contacto" value={form.contacto} onChange={e => set('contacto', e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Teléfono del contacto</label>
+                <input type="tel" style={inputStyle} placeholder="Ej: 099 123 4567" value={form.telefonoContacto} onChange={e => set('telefonoContacto', e.target.value)} />
               </div>
               <div>
                 <label style={labelStyle}>Rol del contacto</label>
@@ -436,7 +594,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving }) {
             </button>
             <button type="submit" disabled={isSaving}
               style={{ padding: '0.6rem 1.6rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, opacity: isSaving ? 0.7 : 1 }}>
-              {isSaving ? '⏳ Guardando...' : '💾 Guardar visita'}
+              {isSaving ? `⏳ ${savingLabel || 'Guardando...'}` : '💾 Guardar visita'}
             </button>
           </div>
         </form>
@@ -583,6 +741,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingLabel, setSavingLabel] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterEjecutivo, setFilterEjecutivo] = useState('');
@@ -642,7 +801,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
 
   // ── Acciones ──
 
-  const handleSave = async (form) => {
+  const handleSave = async (form, pendingPhotoFiles = []) => {
     setIsSaving(true);
     try {
       const localId = form.id; // puede ser un id local tipo 'visit_...' o un GUID real
@@ -665,19 +824,44 @@ export default function Visitas({ opportunities = [], triggerToast }) {
           ? [finalVisit, ...prev]
           : prev.map(v => v.id === localId ? finalVisit : v)
       );
+
+      // ── Fotos a SharePoint ──
+      // Se suben DESPUÉS de guardar en Dataverse porque la carpeta de la
+      // visita se nombra con su GUID real. Un fallo aquí no revierte la
+      // visita: los datos de campo ya están a salvo.
+      let photoSummary = '';
+      if (pendingPhotoFiles.length > 0) {
+        const visitGuid = finalVisit.id;
+        if (isDemo || !/^[0-9a-f-]{36}$/i.test(visitGuid)) {
+          photoSummary = ` Las ${pendingPhotoFiles.length} foto(s) no se subieron: se requiere modo Live y sincronización con Dataverse.`;
+        } else {
+          setSavingLabel(`Subiendo fotos (0/${pendingPhotoFiles.length})...`);
+          const { uploaded, errors } = await uploadVisitPhotos(
+            visitGuid,
+            pendingPhotoFiles,
+            (i, n) => setSavingLabel(`Subiendo fotos (${i}/${n})...`)
+          );
+          if (uploaded.length) photoSummary += ` 📸 ${uploaded.length} foto(s) subida(s) a SharePoint.`;
+          if (errors.length) photoSummary += ` ⚠️ ${errors.length} foto(s) fallaron: ${errors[0]}`;
+        }
+      }
+
       setShowForm(false);
       setEditingVisit(null);
       if (isDemo) {
-        triggerToast(`🧪 ${isNew ? 'Visita registrada' : 'Visita actualizada'} solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+        triggerToast(`🧪 ${isNew ? 'Visita registrada' : 'Visita actualizada'} solo en este navegador (Modo Demo, no visible para otros usuarios).${photoSummary}`, '#fbbf24');
       } else if (saved?._opportunityLinkDropped) {
-        triggerToast('⚠️ Visita guardada, pero no se pudo vincular a la oportunidad (revisar el nombre del lookup en Dataverse). Los demás datos sí se guardaron.', '#fbbf24');
+        triggerToast(`⚠️ Visita guardada, pero no se pudo vincular a la oportunidad (revisar el nombre del lookup en Dataverse). Los demás datos sí se guardaron.${photoSummary}`, '#fbbf24');
+      } else if (saved?._droppedFields?.includes('cr168_contactphone')) {
+        triggerToast(`⚠️ Visita guardada, pero el teléfono del contacto no se sincronizó: falta crear la columna cr168_contactphone en la tabla de visitas.${photoSummary}`, '#fbbf24');
       } else {
-        triggerToast(isNew ? '📍 Visita registrada y sincronizada con Dataverse.' : '✅ Visita actualizada y sincronizada con Dataverse.');
+        triggerToast(`${isNew ? '📍 Visita registrada y sincronizada con Dataverse.' : '✅ Visita actualizada y sincronizada con Dataverse.'}${photoSummary}`);
       }
     } catch (e) {
       triggerToast(`❌ Error al guardar: ${e.message}`, 'rgba(192,57,43,0.5)');
     } finally {
       setIsSaving(false);
+      setSavingLabel('');
     }
   };
 
@@ -899,6 +1083,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingVisit(null); }}
           isSaving={isSaving}
+          savingLabel={savingLabel}
         />
       )}
     </div>

@@ -95,6 +95,7 @@ function mapToOData(v) {
   if (v.etapaObra)           payload.cr168_constructionstage  = v.etapaObra;
   if (v.lineaNegocio)        payload.cr168_businessline       = v.lineaNegocio;
   if (v.contacto)            payload.cr168_contactidentified  = v.contacto;
+  if (v.telefonoContacto)    payload.cr168_contactphone       = v.telefonoContacto;
   if (v.decisor)             payload.cr168_decisionmaker      = v.decisor;
   if (v.necesidadDetectada)  payload.cr168_detectedneeds      = v.necesidadDetectada;
   if (v.prioridad)           payload.cr168_commercialpriority = v.prioridad;
@@ -174,6 +175,7 @@ function mapFromOData(o) {
     etapaObra: o.cr168_constructionstage || '',
     lineaNegocio: o.cr168_businessline || '',
     contacto: o.cr168_contactidentified || '',
+    telefonoContacto: o.cr168_contactphone || '',
     decisor: o.cr168_decisionmaker || '',
     necesidadDetectada: o.cr168_detectedneeds || '',
     montoEstimado: Number(o.cr168_estimatedamount || 0),
@@ -267,39 +269,54 @@ export async function sendVisit(visit, isNew = false) {
     pushLog(method, endpoint, '102 Syncing...', payload);
     let response = await doRequest(payload);
     let linkDropped = false;
+    const droppedFields = [];
 
-    if (!response.ok) {
-      let errText = await response.text();
+    // Si Dataverse rechaza una propiedad como "undeclared property 'X'",
+    // rechaza TODO el registro — incluyendo campos que sí existen. Pasa en
+    // dos escenarios reales: (a) el lookup de Oportunidad si el navigation
+    // property tiene otro SchemaName en el ambiente, y (b) columnas nuevas
+    // (ej. cr168_contactphone) que todavía no se crean en la tabla. En vez
+    // de bloquear a quien registra la visita, quitamos el campo rechazado y
+    // reintentamos, hasta 4 veces, para no perder los datos de campo.
+    let attempts = 0;
+    while (!response.ok && attempts < 4) {
+      const errText = await response.text();
       let parsedBody = {};
       try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
+      const message = parsedBody?.error?.message || errText || '';
 
-      // El único vínculo de navegación que enviamos es el de Oportunidad.
-      // Si el ambiente de Dataverse tiene ese lookup con un nombre de
-      // esquema (navigation property) distinto al que asumimos aquí,
-      // Dataverse responde "undeclared property ... only has property
-      // annotations" y rechaza TODO el registro — incluyendo los demás
-      // campos de la visita que no tienen nada que ver con el lookup.
-      // En vez de bloquear a quien está registrando la visita, reintentamos
-      // una vez sin el vínculo para no perder los datos de campo.
-      const bindKey = 'cr168_OpportunityRef@odata.bind';
-      const isLookupBindError = payload[bindKey] &&
-        /undeclared property/i.test(parsedBody?.error?.message || errText || '');
+      // Dataverse reporta el campo inválido con dos redacciones distintas:
+      //  - lookups/binds:    "An undeclared property 'X' which only has..."
+      //  - columnas comunes: "The property 'X' does not exist on type..."
+      const match = message.match(
+        /undeclared property (?:named:?\s*)?'([^']+)'|property '([^']+)' does not exist/i
+      );
+      const badProp = match ? (match[1] || match[2]) : null;
+      const badKey = badProp
+        ? Object.keys(payload).find(k => k === badProp || k.startsWith(`${badProp}@`))
+        : null;
 
-      if (isLookupBindError) {
-        pushLog(method, endpoint, `${response.status} ${response.statusText} (vínculo a oportunidad rechazado por Dataverse, reintentando sin él)`, null, parsedBody);
-        const retryPayload = { ...payload };
-        delete retryPayload[bindKey];
-        payload = retryPayload;
-        linkDropped = true;
-        response = await doRequest(retryPayload);
-      }
-
-      if (!response.ok) {
-        errText = await response.text();
-        try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
+      if (!badKey) {
         pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
         throw new Error(`Visit sync failed: ${parseDataverseError(response.status, errText)}`);
       }
+
+      pushLog(method, endpoint, `${response.status} (campo '${badKey}' rechazado por Dataverse, reintentando sin él)`, null, parsedBody);
+      const retryPayload = { ...payload };
+      delete retryPayload[badKey];
+      payload = retryPayload;
+      droppedFields.push(badKey);
+      if (badKey.startsWith('cr168_OpportunityRef')) linkDropped = true;
+      attempts++;
+      response = await doRequest(retryPayload);
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      let parsedBody = {};
+      try { parsedBody = JSON.parse(errText || '{}'); } catch { parsedBody = { raw: errText }; }
+      pushLog(method, endpoint, `${response.status} ${response.statusText}`, null, parsedBody);
+      throw new Error(`Visit sync failed: ${parseDataverseError(response.status, errText)}`);
     }
 
     const status = effectiveIsNew ? '201 Created' : '204 No Content';
@@ -308,6 +325,7 @@ export async function sendVisit(visit, isNew = false) {
     pushLog(method, endpoint, status, null, responseData);
     const result = responseData ? mapFromOData(responseData) : { ...visit };
     if (linkDropped) result._opportunityLinkDropped = true;
+    if (droppedFields.length) result._droppedFields = droppedFields;
     return result;
   } catch (e) {
     pushLog(method, endpoint, `500 Sync Error: ${e.message}`);
