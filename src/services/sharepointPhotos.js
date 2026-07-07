@@ -1,11 +1,20 @@
 /**
  * Fotos de visitas comerciales — SharePoint vía Microsoft Graph
- * Sitio: cambricondes.sharepoint.com/sites/CRMGrupoCAM
+ * Sitio: cambricondes.sharepoint.com/sites/GESTIONCOMERCIAL
  *
  * Diseño: NO se guarda nada en Dataverse. Cada visita tiene una carpeta
  * determinística en la biblioteca de documentos del sitio:
  *
- *   Visitas CRM/{GUID de la visita}/foto_*.jpg
+ *   CRM_CAM_Reportes/Visitas/{Proyecto - fecha - guid8}/foto_*.jpg
+ *
+ * El nombre de la carpeta es legible (nombre del proyecto + fecha) y el
+ * sufijo guid8 (primeros 8 caracteres del GUID de la visita) garantiza
+ * unicidad y permite reencontrar la carpeta si el proyecto se renombra.
+ * Las carpetas viejas nombradas con el GUID completo se renombran
+ * automáticamente al nuevo formato la primera vez que se resuelven.
+ *
+ * (Subcarpeta "Visitas" para no mezclar las carpetas por visita con los
+ * reportes que ya viven en CRM_CAM_Reportes.)
  *
  * La galería se arma listando la carpeta al abrir la visita. Ventajas:
  * cero columnas nuevas en Dataverse (capacidad cara), las fotos son visibles
@@ -16,9 +25,12 @@ import { getGraphToken } from './graphAuth';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SITE_HOST = 'cambricondes.sharepoint.com';
-const SITE_PATH = '/sites/CRMGrupoCAM';
-const ROOT_FOLDER = 'Visitas CRM';
-const SITE_ID_CACHE_KEY = 'sp_crm_site_id';
+const SITE_PATH = '/sites/GESTIONCOMERCIAL';
+// Segmentos de la ruta raíz (se codifican por separado en las URLs de Graph).
+const ROOT_SEGMENTS = ['CRM_CAM_Reportes', 'Visitas'];
+// La clave incluye el sitio: si quedara la vieja ('sp_crm_site_id', sitio
+// CRMGrupoCAM) cacheada en el navegador de alguien, apuntaría al sitio anterior.
+const SITE_ID_CACHE_KEY = 'sp_gc_site_id';
 
 async function graphFetch(path, options = {}) {
   const token = await getGraphToken();
@@ -96,26 +108,137 @@ function compressImage(file) {
   });
 }
 
-// ── Operaciones ──────────────────────────────────────────────────────────────
+// ── Carpeta por visita ───────────────────────────────────────────────────────
 
 function encodePath(...segments) {
   return segments.map(encodeURIComponent).join('/');
 }
 
+/** Quita caracteres inválidos/problemáticos para nombres de carpeta en SharePoint. */
+function sanitizeFolderName(name) {
+  return (name || '')
+    .replace(/["*:<>?/\\|#%~&{}]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\.+$/, '')
+    .slice(0, 80)
+    .trim();
+}
+
+/**
+ * Nombre determinístico de la carpeta de una visita:
+ *   "Edificio Torres del Norte - 2026-07-07 - 3f01b1d8"
+ * visit: { id (GUID), nombreProyecto, fecha }
+ */
+export function visitFolderName(visit) {
+  const guid8 = (visit.id || '').replace(/-/g, '').slice(0, 8).toLowerCase();
+  const parts = [sanitizeFolderName(visit.nombreProyecto) || 'Visita'];
+  if (visit.fecha) parts.push(visit.fecha);
+  parts.push(guid8);
+  return parts.join(' - ');
+}
+
+/** GET metadata de una carpeta bajo Visitas/. Devuelve el driveItem o null (404). */
+async function getFolderItem(siteId, folderName) {
+  const response = await graphFetch(
+    `/sites/${siteId}/drive/root:/${encodePath(...ROOT_SEGMENTS, folderName)}` +
+    `?$select=id,name,folder`
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`No se pudo verificar la carpeta de la visita: ${await parseGraphError(response)}`);
+  }
+  return response.json();
+}
+
+/** Renombra un driveItem. Best-effort: devuelve true/false, no lanza. */
+async function renameItem(siteId, itemId, newName) {
+  try {
+    const response = await graphFetch(`/sites/${siteId}/drive/items/${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName })
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resuelve el nombre de carpeta a usar para una visita:
+ *  1. Carpeta con el nombre nuevo → usarla.
+ *  2. Carpeta legacy nombrada con el GUID completo → renombrarla al formato
+ *     nuevo (migración automática) y usarla.
+ *  3. Carpeta con el sufijo " - guid8" pero otro nombre de proyecto/fecha
+ *     (el proyecto fue renombrado) → renombrarla al nombre actual.
+ *  4. Nada existe → devolver el nombre nuevo (se crea al subir la 1ª foto).
+ * Cachea el resultado en sessionStorage por visita.
+ */
+async function resolveVisitFolder(visit) {
+  const target = visitFolderName(visit);
+  const cacheKey = `sp_visit_folder_${visit.id}`;
+  if (sessionStorage.getItem(cacheKey) === target) return target;
+
+  const siteId = await getSiteId();
+
+  // 1. Ya existe con el nombre correcto.
+  if (await getFolderItem(siteId, target)) {
+    sessionStorage.setItem(cacheKey, target);
+    return target;
+  }
+
+  // 2. Carpeta legacy = GUID completo.
+  const legacy = await getFolderItem(siteId, visit.id);
+  if (legacy) {
+    const renamed = await renameItem(siteId, legacy.id, target);
+    const name = renamed ? target : visit.id;
+    sessionStorage.setItem(cacheKey, name);
+    return name;
+  }
+
+  // 3. Proyecto/fecha cambiaron: buscar por sufijo guid8 entre las carpetas.
+  const guid8 = (visit.id || '').replace(/-/g, '').slice(0, 8).toLowerCase();
+  if (guid8) {
+    const response = await graphFetch(
+      `/sites/${siteId}/drive/root:/${encodePath(...ROOT_SEGMENTS)}:/children?$select=id,name,folder&$top=999`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      const match = (data.value || []).find(
+        item => item.folder && item.name.toLowerCase().endsWith(` - ${guid8}`)
+      );
+      if (match) {
+        const renamed = await renameItem(siteId, match.id, target);
+        const name = renamed ? target : match.name;
+        sessionStorage.setItem(cacheKey, name);
+        return name;
+      }
+    }
+  }
+
+  // 4. Visita sin fotos todavía.
+  sessionStorage.setItem(cacheKey, target);
+  return target;
+}
+
+// ── Operaciones ──────────────────────────────────────────────────────────────
+
 /**
  * Sube una foto a la carpeta de la visita. Graph crea las carpetas
  * intermedias automáticamente en un PUT por ruta.
- * Devuelve el driveItem creado.
+ * visit: { id, nombreProyecto, fecha }. Devuelve el driveItem creado.
  */
-export async function uploadVisitPhoto(visitId, file) {
+export async function uploadVisitPhoto(visit, file) {
   const siteId = await getSiteId();
+  const folder = await resolveVisitFolder(visit);
   const blob = await compressImage(file);
   if (blob.size > SIMPLE_UPLOAD_LIMIT) {
     throw new Error(`"${file.name}" sigue pesando más de 4 MB tras comprimir. Reduce la resolución.`);
   }
   const safeName = `foto_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
     .replace(/\.(png|heic|heif|webp|bmp)$/i, '.jpg');
-  const path = encodePath(ROOT_FOLDER, visitId, safeName);
+  const path = encodePath(...ROOT_SEGMENTS, folder, safeName);
   const response = await graphFetch(
     `/sites/${siteId}/drive/root:/${path}:/content`,
     {
@@ -132,11 +255,13 @@ export async function uploadVisitPhoto(visitId, file) {
 
 /**
  * Lista las fotos de una visita con thumbnails listos para <img>.
+ * visit: { id, nombreProyecto, fecha }.
  * Devuelve [] si la carpeta no existe todavía (visita sin fotos).
  */
-export async function listVisitPhotos(visitId) {
+export async function listVisitPhotos(visit) {
   const siteId = await getSiteId();
-  const path = encodePath(ROOT_FOLDER, visitId);
+  const folder = await resolveVisitFolder(visit);
+  const path = encodePath(...ROOT_SEGMENTS, folder);
   const response = await graphFetch(
     `/sites/${siteId}/drive/root:/${path}:/children` +
     `?$select=id,name,webUrl,size,createdDateTime&$expand=thumbnails&$orderby=name`
@@ -170,16 +295,17 @@ export async function deleteVisitPhoto(itemId) {
 
 /**
  * Sube varias fotos en secuencia (evita throttling de Graph).
+ * visit: { id, nombreProyecto, fecha }.
  * Devuelve { uploaded, errors } sin lanzar: la visita ya se guardó y un
  * fallo parcial de fotos no debe romper el flujo principal.
  */
-export async function uploadVisitPhotos(visitId, files, onProgress) {
+export async function uploadVisitPhotos(visit, files, onProgress) {
   const uploaded = [];
   const errors = [];
   for (let i = 0; i < files.length; i++) {
     if (onProgress) onProgress(i + 1, files.length);
     try {
-      uploaded.push(await uploadVisitPhoto(visitId, files[i]));
+      uploaded.push(await uploadVisitPhoto(visit, files[i]));
     } catch (e) {
       errors.push(e.message);
     }

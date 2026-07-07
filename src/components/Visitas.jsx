@@ -181,7 +181,7 @@ const photoRemoveBtn = {
   display: 'flex', alignItems: 'center', justifyContent: 'center'
 };
 
-function PhotoSection({ visitId, pendingFiles, setPendingFiles }) {
+function PhotoSection({ visitId, projectName, fecha, pendingFiles, setPendingFiles }) {
   const [existing, setExisting] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -192,11 +192,13 @@ function PhotoSection({ visitId, pendingFiles, setPendingFiles }) {
   useEffect(() => {
     if (!isSynced) return;
     setLoading(true);
-    listVisitPhotos(visitId)
+    listVisitPhotos({ id: visitId, nombreProyecto: projectName, fecha })
       .then(setExisting)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, [visitId, isSynced]);
+    // Solo valores GUARDADOS: la carpeta se renombra al resolver, y no debe
+    // renombrarse por ediciones del formulario aún sin guardar.
+  }, [visitId, isSynced, projectName, fecha]);
 
   const total = existing.length + pendingFiles.length;
 
@@ -440,6 +442,8 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
           {/* 3. Fotos del proyecto */}
           <PhotoSection
             visitId={form.id}
+            projectName={visit?.nombreProyecto}
+            fecha={visit?.fecha}
             pendingFiles={pendingPhotos}
             setPendingFiles={setPendingPhotos}
           />
@@ -827,8 +831,8 @@ export default function Visitas({ opportunities = [], triggerToast }) {
 
       // ── Fotos a SharePoint ──
       // Se suben DESPUÉS de guardar en Dataverse porque la carpeta de la
-      // visita se nombra con su GUID real. Un fallo aquí no revierte la
-      // visita: los datos de campo ya están a salvo.
+      // visita se nombra "Proyecto - fecha - guid8" y necesita el GUID real.
+      // Un fallo aquí no revierte la visita: los datos ya están a salvo.
       let photoSummary = '';
       if (pendingPhotoFiles.length > 0) {
         const visitGuid = finalVisit.id;
@@ -837,7 +841,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
         } else {
           setSavingLabel(`Subiendo fotos (0/${pendingPhotoFiles.length})...`);
           const { uploaded, errors } = await uploadVisitPhotos(
-            visitGuid,
+            { id: visitGuid, nombreProyecto: finalVisit.nombreProyecto, fecha: finalVisit.fecha },
             pendingPhotoFiles,
             (i, n) => setSavingLabel(`Subiendo fotos (${i}/${n})...`)
           );
