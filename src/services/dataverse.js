@@ -98,7 +98,11 @@ function mapToOData(op) {
     cr168_clienttype: op.tipoCliente || '',
     cr168_entrydate: op.fechaIngreso || null,
     cr168_dealstatus: op.estado || '',
-    cr168_lossreason: op.motivoPerdida || ''
+    cr168_lossreason: op.motivoPerdida || '',
+    // Columnas creadas 2026-07-13: antes 'proyecto' y 'margen' no se enviaban a
+    // Dataverse y mapFromOData los devolvía vacíos, borrando el campo al guardar.
+    cr168_projectrequirement: op.proyecto || '',
+    cr168_estimatedmargin: Number(op.margen || 0)
   };
 }
 
@@ -112,9 +116,9 @@ function mapFromOData(odata) {
     contactoPhone: odata.cr168_contactandphone?.includes(' - ') ? odata.cr168_contactandphone.split(' - ')[1] : '',
     tipoCliente: odata.cr168_clienttype || 'Privado',
     lineaNegocio: odata.cr168_businessline || 'CAM SCI',
-    proyecto: '',
+    proyecto: odata.cr168_projectrequirement || '',
     monto: Number(odata.cr168_estimatedamount || 0),
-    margen: 0,
+    margen: Number(odata.cr168_estimatedmargin || 0),
     probabilidad: odata.cr168_closeprobability ? `${Math.round(odata.cr168_closeprobability * 100)}%` : '50%',
     etapa: INT_TO_STAGE[odata.cr168_salesstage] || 'Prospección',
     proximaAccion: odata.cr168_nextaction || 'Llamada',
