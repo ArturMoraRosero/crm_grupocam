@@ -8,7 +8,7 @@ import {
 } from './mockData';
 import {
   subscribeToLogs, getSettings, saveSettings, fetchOpportunities, sendOpportunity, removeOpportunity,
-  loginMicrosoft, getActiveToken, checkForRedirectToken
+  loginMicrosoft, getActiveToken, checkForRedirectToken, startTokenKeepAlive
 } from './services/dataverse';
 import Visitas from './components/Visitas';
 import './index.css';
@@ -176,6 +176,9 @@ export default function App() {
       setActiveMsalToken(token);
       triggerToast('🟢 Conectado exitosamente con tu cuenta de Microsoft.', 'rgba(16, 185, 129, 0.5)');
     }
+    // Renovación proactiva del token: mientras la sesión M365 siga viva, la
+    // sesión del CRM no se corta aunque pasen horas cargando información.
+    startTokenKeepAlive();
   }, []);
 
   // Auto-login SSO silencioso: si el usuario ya tiene sesión M365 activa, obtiene el

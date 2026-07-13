@@ -158,6 +158,86 @@ export function loginMicrosoft(options = {}) {
   }
 }
 
+// ── Renovación silenciosa del token de Dataverse ─────────────────────────────
+// El token del flujo implícito dura ~60-90 min (lo decide Entra ID). Para que
+// Arturo y Silvana puedan trabajar horas sin que "se cierre la sesión", se
+// renueva en un iframe oculto con prompt=none (mismo patrón que graphAuth.js
+// usa para SharePoint): mientras la sesión M365 del navegador siga viva, el
+// token se refresca sin UI ni pérdida del formulario en pantalla.
+// main.jsx intercepta el callback cuando state === DATAVERSE_RENEW_STATE y
+// manda el token por postMessage SIN montar la app dentro del iframe.
+export const DATAVERSE_RENEW_STATE = 'grupocam_crm_dataverse_renew';
+
+function storeDataverseToken(token, expiresInSeconds) {
+  const expiryTime = Date.now() + parseInt(expiresInSeconds || '3600', 10) * 1000;
+  sessionStorage.setItem('dataverse_oauth_token', JSON.stringify({ token, expiryTime }));
+  return expiryTime;
+}
+
+let renewInFlight = null;
+
+export function renewTokenSilently() {
+  if (renewInFlight) return renewInFlight;
+  renewInFlight = new Promise((resolve, reject) => {
+    const settings = getSettings();
+    const params = {
+      client_id: settings.clientId,
+      response_type: 'token',
+      redirect_uri: window.location.origin + '/',
+      scope: `${settings.envUrl}/user_impersonation`,
+      state: DATAVERSE_RENEW_STATE,
+      prompt: 'none'
+    };
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+
+    const timer = setTimeout(() => { cleanup(); reject(new Error('renew_timeout')); }, 10000);
+    function cleanup() {
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+      try { document.body.removeChild(iframe); } catch { /* ya removido */ }
+    }
+    function onMessage(e) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || e.data.type !== 'DATAVERSE_AUTH') return;
+      cleanup();
+      if (e.data.token) {
+        storeDataverseToken(e.data.token, e.data.expiresIn);
+        pushLog('SYSTEM', 'Token de Dataverse renovado en silencio', '200 OK');
+        resolve(e.data.token);
+      } else {
+        pushLog('SYSTEM', `Renovación silenciosa falló (${e.data.error || 'sin sesión M365'})`, '401 Unauthorized');
+        reject(new Error(e.data.error || 'renew_failed'));
+      }
+    }
+    window.addEventListener('message', onMessage);
+    iframe.src = `https://login.microsoftonline.com/${settings.tenantId}/oauth2/v2.0/authorize?` +
+      new URLSearchParams(params).toString();
+    document.body.appendChild(iframe);
+  }).finally(() => { renewInFlight = null; });
+  return renewInFlight;
+}
+
+// Keep-alive proactivo: revisa cada minuto y renueva cuando faltan <10 min
+// para que el token expire — así nunca se corta a mitad de una captura.
+let keepAliveTimer = null;
+
+export function startTokenKeepAlive() {
+  if (keepAliveTimer || window.self !== window.top) return; // no dentro de iframes
+  keepAliveTimer = setInterval(() => {
+    const settings = getSettings();
+    if (settings.mode !== 'live' || settings.authMethod !== 'sso') return;
+    try {
+      const saved = sessionStorage.getItem('dataverse_oauth_token');
+      if (!saved) return; // sin sesión: no hay nada que mantener vivo
+      const { expiryTime } = JSON.parse(saved);
+      if (expiryTime - Date.now() < 10 * 60 * 1000) {
+        renewTokenSilently().catch(() => { /* se reintenta al minuto */ });
+      }
+    } catch { /* token corrupto: se resolverá en el próximo authenticateOAuth */ }
+  }, 60 * 1000);
+}
+
 export function getActiveToken() {
   try {
     const saved = sessionStorage.getItem('dataverse_oauth_token');
@@ -207,8 +287,14 @@ export async function authenticateOAuth() {
   }
   if (settings.authMethod === 'sso') {
     const token = getActiveToken();
-    if (!token) throw new Error('Requiere iniciar sesión con Microsoft.');
-    return token;
+    if (token) return token;
+    // Token vencido o ausente: intento de renovación silenciosa antes de
+    // molestar al usuario — evita perder lo que está escrito en el formulario.
+    try {
+      return await renewTokenSilently();
+    } catch {
+      throw new Error('Requiere iniciar sesión con Microsoft.');
+    }
   }
   const tokenUrl = `https://login.microsoftonline.com/${settings.tenantId}/oauth2/v2.0/token`;
   const finalUrl = settings.corsProxy ? `${settings.corsProxy}${tokenUrl}` : tokenUrl;
