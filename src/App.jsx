@@ -389,6 +389,13 @@ export default function App() {
       return;
     }
 
+    // Años tipeados a mano (ej. "20206") pasan el <input type="date"> pero
+    // Dataverse rechaza la fecha con HTTP 400. Se valida antes de enviar.
+    if (currentOp.fechaAccion && !/^20\d{2}-\d{2}-\d{2}$/.test(currentOp.fechaAccion)) {
+      triggerToast(`⚠️ Fecha de seguimiento inválida ("${currentOp.fechaAccion}"): revisa el año.`, 'var(--accent-orange)');
+      return;
+    }
+
     const numericMonto = parseFloat(currentOp.monto) || 0;
     const numericMargen = parseFloat(currentOp.margen) || 0;
 

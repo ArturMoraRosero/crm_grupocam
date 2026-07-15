@@ -806,6 +806,14 @@ export default function Visitas({ opportunities = [], triggerToast }) {
   // ── Acciones ──
 
   const handleSave = async (form, pendingPhotoFiles = []) => {
+    // Años tipeados a mano (ej. "20206") pasan el <input type="date"> pero
+    // Dataverse rechaza la fecha con HTTP 400. Se valida antes de enviar.
+    const badDate = [['Fecha de visita', form.fecha], ['Fecha de seguimiento', form.fechaSeguimiento]]
+      .find(([, v]) => v && !/^20\d{2}-\d{2}-\d{2}$/.test(v));
+    if (badDate) {
+      triggerToast(`⚠️ ${badDate[0]} inválida ("${badDate[1]}"): revisa el año.`, 'var(--accent-orange)');
+      return;
+    }
     setIsSaving(true);
     try {
       const localId = form.id; // puede ser un id local tipo 'visit_...' o un GUID real
