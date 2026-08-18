@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/cotizador", "destination": "/cotizador/index.html" }
-  ]
-}
