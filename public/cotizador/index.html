@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotización de Protección Pasiva Contra Fuego · CAMCEQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --graphite:#16191d;
+    --steel:#23272e;
+    --steel-line:#33383f;
+    --paper:#f4f2ed;
+    --paper-dim:#e4e0d7;
+    --ink:#16191d;
+    --ink-soft:#5c6169;
+    --ember:#e8781e;
+    --ember-deep:#c0491a;
+    --fuego:#a81f1a;
+    --ok:#2f7d5b;
+    --white:#ffffff;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--paper);color:var(--ink);line-height:1.5;
+    padding:clamp(16px,4vw,48px);display:flex;justify-content:center;
+  }
+  .wrap{width:100%;max-width:920px}
+
+  .masthead{border-top:3px solid var(--fuego);padding-top:18px;margin-bottom:26px}
+  .eyebrow{
+    font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ember-deep);display:flex;gap:10px;align-items:center;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--paper-dim)}
+  h1{
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(26px,5vw,42px);
+    line-height:1.02;letter-spacing:-.015em;margin:12px 0 8px;
+  }
+  h1 em{font-style:normal;color:var(--fuego)}
+  .sub{font-size:14px;color:var(--ink-soft);max-width:58ch}
+
+  .console{
+    display:grid;grid-template-columns:1fr 300px;gap:0;
+    background:var(--white);border:1px solid var(--paper-dim);
+    border-radius:var(--radius);overflow:hidden;margin-top:28px;
+    box-shadow:0 1px 0 rgba(0,0,0,.04),0 14px 40px -28px rgba(0,0,0,.4);
+  }
+  @media(max-width:720px){.console{grid-template-columns:1fr}}
+
+  .inputs{padding:clamp(20px,3vw,32px)}
+  .field{margin-bottom:24px}
+  .field:last-child{margin-bottom:0}
+  label.flabel{
+    display:block;font-family:'Space Mono',monospace;font-size:11px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;
+  }
+  label.flabel b{color:var(--ink);font-weight:700}
+
+  .area-in{position:relative}
+  .area-in input{
+    width:100%;font-family:'Archivo',sans-serif;font-weight:700;font-size:34px;
+    padding:8px 62px 8px 0;border:none;border-bottom:2px solid var(--ink);
+    background:transparent;color:var(--ink);letter-spacing:-.01em;
+  }
+  .area-in input:focus{outline:none;border-bottom-color:var(--ember)}
+  .area-in .unit{
+    position:absolute;right:0;bottom:12px;font-family:'Space Mono',monospace;
+    font-size:14px;color:var(--ink-soft);
+  }
+
+  .seg{display:grid;gap:8px}
+  .seg.two{grid-template-columns:1fr 1fr}
+  .seg.three{grid-template-columns:repeat(3,1fr)}
+  .opt{
+    border:1px solid var(--paper-dim);border-radius:var(--radius);
+    padding:12px;cursor:pointer;background:var(--white);transition:all .12s ease;
+    display:flex;flex-direction:column;gap:3px;position:relative;
+  }
+  .opt:hover{border-color:var(--ink-soft)}
+  .opt input{position:absolute;opacity:0;pointer-events:none}
+  .opt .otitle{font-weight:600;font-size:14px}
+  .opt .odesc{font-size:11.5px;color:var(--ink-soft);line-height:1.35}
+  .opt.sel{border-color:var(--fuego);background:#fbf4f2;box-shadow:inset 0 0 0 1px var(--fuego)}
+  .opt.sel .otitle{color:var(--fuego)}
+  .opt:focus-within{outline:2px solid var(--ember);outline-offset:2px}
+
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:9px;line-height:1.4}
+
+  /* Readout: perfil de protección, sin precio */
+  .readout{
+    background:var(--graphite);color:var(--paper);
+    padding:clamp(20px,3vw,28px);display:flex;flex-direction:column;position:relative;
+  }
+  .readout::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--ember),var(--fuego));
+  }
+  .r-label{
+    font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:#8b9098;margin-bottom:4px;
+  }
+  .gauge-row{display:flex;gap:16px;align-items:flex-end;margin-bottom:22px}
+  .gauge{
+    width:14px;height:96px;background:var(--steel);border-radius:8px;
+    position:relative;overflow:hidden;flex-shrink:0;border:1px solid var(--steel-line);
+  }
+  .gauge .fill{
+    position:absolute;bottom:0;left:0;right:0;
+    background:linear-gradient(to top,var(--ember-deep),var(--ember));
+    transition:height .4s cubic-bezier(.2,.7,.3,1);border-radius:0 0 7px 7px;
+  }
+  .gauge-meta{padding-bottom:2px}
+  .gauge-meta .g-min{font-family:'Archivo',sans-serif;font-weight:800;font-size:30px;line-height:1}
+  .gauge-meta .g-cap{font-size:11px;color:#8b9098;margin-top:4px}
+
+  .profile{margin-top:auto}
+  .profile .p-sys{font-family:'Archivo',sans-serif;font-weight:700;font-size:19px;margin-bottom:2px}
+  .profile .p-area{font-size:12.5px;color:#9aa0a8;margin-bottom:16px}
+  .incl{border-top:1px solid var(--steel-line);padding-top:14px}
+  .incl .i-h{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8b9098;margin-bottom:10px}
+  .incl ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .incl li{font-size:12.5px;color:#c3c7cd;display:flex;gap:9px;line-height:1.35}
+  .incl li::before{content:"";width:6px;height:6px;background:var(--ember);border-radius:1px;margin-top:6px;flex-shrink:0}
+
+  /* Lead capture */
+  .lead{
+    background:var(--white);border:1px solid var(--paper-dim);border-top:none;
+    border-radius:0 0 var(--radius) var(--radius);padding:clamp(20px,3vw,32px);margin-top:-1px;
+  }
+  .lead-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .lead-head h2{font-family:'Archivo',sans-serif;font-weight:700;font-size:19px;letter-spacing:-.01em}
+  .lead-head p{font-size:12.5px;color:var(--ink-soft)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  .tf{display:flex;flex-direction:column;gap:6px}
+  .tf label{font-size:11px;font-family:'Space Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .tf input{
+    padding:11px 12px;border:1px solid var(--paper-dim);border-radius:var(--radius);
+    font-family:'Inter',sans-serif;font-size:14px;background:var(--paper);color:var(--ink);
+  }
+  .tf input:focus{outline:none;border-color:var(--ember);background:var(--white)}
+  .tf input.err{border-color:var(--fuego);background:#fbf4f2}
+  .full{grid-column:1/-1}
+
+  .cta{grid-column:1/-1;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{
+    font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;letter-spacing:.01em;
+    padding:14px 26px;border:none;border-radius:var(--radius);cursor:pointer;
+    background:var(--fuego);color:var(--white);transition:background .12s ease;
+  }
+  .btn:hover{background:#8f1a16}
+  .btn:focus{outline:2px solid var(--ember);outline-offset:2px}
+  .cta small{font-size:12px;color:var(--ink-soft);flex:1;min-width:180px}
+
+  .confirm{
+    grid-column:1/-1;display:none;background:#eef6f1;border:1px solid #bfe0cf;
+    border-radius:var(--radius);padding:14px 16px;font-size:13px;color:#215c42;line-height:1.5;
+  }
+  .confirm.show{display:block}
+  .confirm b{color:var(--ok)}
+
+  .fineprint{
+    margin-top:20px;font-size:11px;color:var(--ink-soft);line-height:1.6;
+    border-top:1px solid var(--paper-dim);padding-top:16px;
+  }
+  .fineprint strong{color:var(--ink)}
+  .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .tag{
+    font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.08em;
+    border:1px solid var(--paper-dim);border-radius:2px;padding:4px 8px;color:var(--ink-soft);
+  }
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">CAMCEQ · Construcciones y Equipos S.A.</div>
+    <h1>Protección pasiva<br>contra <em>fuego</em>.</h1>
+    <p class="sub">Cuéntenos su proyecto y reciba una cotización con ingeniería de cálculo sobre planos reales, sin costo. Único aplicador autorizado de ISOLATEK en Ecuador.</p>
+  </header>
+
+  <div class="console">
+    <div class="inputs">
+
+      <div class="field">
+        <label class="flabel" for="area">Área a proteger <b>(m² de acero)</b></label>
+        <div class="area-in">
+          <input id="area" type="number" inputmode="decimal" min="0" step="0.01" value="98" aria-label="Área en metros cuadrados">
+          <span class="unit">m²</span>
+        </div>
+        <p class="hint">Si aún no tiene el metraje exacto, indique un aproximado. CAM lo precisa sobre planos.</p>
+      </div>
+
+      <div class="field">
+        <label class="flabel">Elemento y sistema</label>
+        <div class="seg two" role="radiogroup" aria-label="Producto">
+          <label class="opt sel">
+            <input type="radio" name="prod" value="sprayfilm" checked>
+            <span class="otitle">SprayFilm WB</span>
+            <span class="odesc">Intumescente base agua. Acero expuesto, columnas y vigas a la vista.</span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="prod" value="cafco300">
+            <span class="otitle">Cafco 300</span>
+            <span class="odesc">Ignífugo base yeso. Vigas y montajes ocultos, subsuelos secos.</span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="prod" value="cafco400">
+            <span class="otitle">Cafco 400</span>
+            <span class="odesc">Base cemento. Zonas de alta humedad.</span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="prod" value="mixto">
+            <span class="otitle">No estoy seguro</span>
+            <span class="odesc">CAM define el sistema óptimo según su proyecto.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="flabel">Tiempo de retardancia requerido</label>
+        <div class="seg three" role="radiogroup" aria-label="Minutos de resistencia">
+          <label class="opt sel">
+            <input type="radio" name="min" value="60" checked>
+            <span class="otitle">60 min</span><span class="odesc">F-60</span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="min" value="90">
+            <span class="otitle">90 min</span><span class="odesc">Subsuelos (NEC)</span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="min" value="120">
+            <span class="otitle">120 min</span><span class="odesc">Alta exigencia</span>
+          </label>
+        </div>
+        <p class="hint">A mayor tiempo requerido, mayor espesor de material. CAM calcula el espesor exacto por masividad de cada elemento.</p>
+      </div>
+
+    </div>
+
+    <aside class="readout" aria-live="polite">
+      <div class="r-label">Nivel de protección</div>
+      <div class="gauge-row">
+        <div class="gauge"><div class="fill" id="gaugeFill" style="height:50%"></div></div>
+        <div class="gauge-meta">
+          <div class="g-min" id="gMin">60′</div>
+          <div class="g-cap">resistencia al fuego</div>
+        </div>
+      </div>
+
+      <div class="profile">
+        <div class="r-label">Su configuración</div>
+        <div class="p-sys" id="pSys">SprayFilm WB</div>
+        <div class="p-area" id="pArea">98 m² · 60 min de resistencia</div>
+
+        <div class="incl">
+          <div class="i-h">Su cotización incluye</div>
+          <ul>
+            <li>Cálculo ingenieril sobre planos reales, sin costo</li>
+            <li>Mano de obra calificada y personal asegurado</li>
+            <li>Dossier de calidad con metrología para Bomberos</li>
+            <li>Productos certificados UL · ISOLATEK / CAFCO</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="lead">
+    <div class="lead-head">
+      <h2>Reciba su cotización</h2>
+      <p>Respuesta con ingeniería de cálculo, sin costo.</p>
+    </div>
+    <div class="grid2">
+      <div class="tf"><label for="n">Nombre</label><input id="n" type="text" autocomplete="name"></div>
+      <div class="tf"><label for="e">Empresa</label><input id="e" type="text" autocomplete="organization"></div>
+      <div class="tf"><label for="p">Teléfono / WhatsApp</label><input id="p" type="tel" autocomplete="tel"></div>
+      <div class="tf"><label for="m">Correo</label><input id="m" type="email" autocomplete="email"></div>
+      <div class="tf full"><label for="proj">Proyecto (opcional)</label><input id="proj" type="text" placeholder="Nombre y ubicación de la obra"></div>
+
+      <div class="cta">
+        <button class="btn" id="send">Solicitar cotización</button>
+        <small>Se abre su correo con el detalle listo para enviar a ventas@cam.ec</small>
+      </div>
+      <div class="confirm" id="confirm"></div>
+    </div>
+
+    <div class="fineprint">
+      <strong>Cómo trabajamos.</strong> La oferta incluye cálculo ingenieril sin costo, mano de obra calificada, planos, dossier de calidad con metrología para Bomberos y reguladores, seguimiento de aprobación y personal asegurado. Se liquida por m² instalado. El cliente provee acometida de agua, electricidad 220V trifásica y el cierre del área de trabajo. Garantía de un año contra defectos de fabricación; el producto se especifica para durar la vida útil del inmueble.
+      <div class="tags">
+        <span class="tag">UL / ANSI 263</span>
+        <span class="tag">ASTM E119</span>
+        <span class="tag">IBC · NFPA · NEC</span>
+        <span class="tag">ISOLATEK · CAFCO</span>
+        <span class="tag">LEED</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  productos: {
+    sprayfilm:{ nombre:'SprayFilm WB' },
+    cafco300: { nombre:'Cafco 300' },
+    cafco400: { nombre:'Cafco 400' },
+    mixto:    { nombre:'Sistema a definir por CAM' }
+  }
+};
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString('en-US',{maximumFractionDigits:0});
+
+function state(){
+  return {
+    area: parseFloat($('area').value)||0,
+    prod: document.querySelector('input[name="prod"]:checked').value,
+    min:  document.querySelector('input[name="min"]:checked').value
+  };
+}
+function paintSelection(){
+  document.querySelectorAll('.opt').forEach(o=>o.classList.toggle('sel',o.querySelector('input').checked));
+}
+function render(){
+  const s=state();
+  $('gaugeFill').style.height = {'60':50,'90':75,'120':100}[s.min]+'%';
+  $('gMin').textContent = s.min+'′';
+  $('pSys').textContent = CONFIG.productos[s.prod].nombre;
+  $('pArea').textContent = `${fmt(s.area)} m² · ${s.min} min de resistencia`;
+}
+function buildMail(){
+  const s=state();
+  const n=$('n').value.trim(),e=$('e').value.trim(),ph=$('p').value.trim(),m=$('m').value.trim(),proj=$('proj').value.trim();
+  let ok=true;
+  [['n',n],['p',ph],['m',m]].forEach(([id,v])=>{const el=$(id);if(!v){el.classList.add('err');ok=false;}else el.classList.remove('err');});
+  if(!ok){$('confirm').className='confirm show';$('confirm').innerHTML='Complete nombre, teléfono y correo para enviar la solicitud.';return;}
+
+  const asunto=`Solicitud de cotización — Protección pasiva contra fuego${proj?(' — '+proj):''}`;
+  const cuerpo=
+`Solicitud generada desde el sitio web de CAMCEQ.
+
+Contacto
+  Nombre: ${n}
+  Empresa: ${e||'—'}
+  Teléfono/WhatsApp: ${ph}
+  Correo: ${m}
+
+Proyecto
+  Obra: ${proj||'—'}
+  Área a proteger: ${fmt(s.area)} m² de acero
+  Sistema de interés: ${CONFIG.productos[s.prod].nombre}
+  Retardancia requerida: ${s.min} min
+
+Solicito cálculo de ingeniería y cotización formal.`;
+  window.location.href=`mailto:ventas@cam.ec?cc=info@cam.ec&subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  $('confirm').className='confirm show';
+  $('confirm').innerHTML='<b>Solicitud lista.</b> Se abrió su correo con el detalle. Envíelo y CAM responde con la cotización de ingeniería.';
+}
+
+document.querySelectorAll('input[name="prod"],input[name="min"]').forEach(r=>r.addEventListener('change',()=>{paintSelection();render();}));
+$('area').addEventListener('input',render);
+$('send').addEventListener('click',buildMail);
+paintSelection();render();
+</script>
+</body>
+</html>
