@@ -511,6 +511,9 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
                 <select style={inputStyle} value={form.prioridad} onChange={e => set('prioridad', e.target.value)}>
                   {PRIORIDADES.map(p => <option key={p}>{p}</option>)}
                 </select>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                  P1 = cuenta A. Con contacto "Decisor directo" y cliente Constructor, Arquitecto o Promotor, suma a la meta de reuniones con tomador de decisión.
+                </div>
               </div>
             </div>
             <hr style={{ border: 'none', borderTop: '1px solid var(--border-primary)', margin: '1rem 0' }} />

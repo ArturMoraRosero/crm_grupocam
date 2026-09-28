@@ -11,6 +11,8 @@ import {
   loginMicrosoft, getActiveToken, checkForRedirectToken, startTokenKeepAlive
 } from './services/dataverse';
 import Visitas from './components/Visitas';
+import PlanosPanel from './components/PlanosPanel';
+import MetasCard from './components/MetasCard';
 import './index.css';
 
 // System Roles mapping for active permissions
@@ -131,6 +133,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showNotificationsList, setShowNotificationsList] = useState(false);
   const [logsUpdated, setLogsUpdated] = useState(0);
+  const [planosVersion, setPlanosVersion] = useState(0);
 
   // Modal Form State (Current Opportunity being created/edited)
   const [currentOp, setCurrentOp] = useState({
@@ -1144,6 +1147,13 @@ export default function App() {
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Tratos de más de $75,000 USD</span>
               </div>
             </div>
+
+            {/* METAS DE ACTIVIDAD: planos por cotizar y reuniones con decisor */}
+            <MetasCard
+              opportunities={visibleOpportunities}
+              soloEjecutivo={activeRole === 'Vendedor' ? activeUser.user : null}
+              refreshKey={planosVersion}
+            />
 
             {/* DASHBOARD PLOTS - GRAPHICS */}
             <div className="resp-2col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
@@ -2190,6 +2200,19 @@ export default function App() {
                   style={{ minHeight: '60px' }}
                 />
               </div>
+
+              {currentOp.id && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <PlanosPanel
+                    op={currentOp}
+                    onUploaded={(names, primerPlano) => {
+                      logAudit('Plano', currentOp.codigo, `${names.length} plano(s) subido(s) a SharePoint: ${names.join(', ')}${primerPlano ? ' (primer plano, suma a la meta)' : ''}`);
+                      triggerToast(`📐 ${names.length} plano(s) subido(s) a SharePoint para ${currentOp.codigo}.`, 'var(--accent-green)');
+                      setPlanosVersion(v => v + 1);
+                    }}
+                  />
+                </div>
+              )}
 
               {/* ACTION BUTTONS */}
               <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', borderTop: '1px solid var(--border-primary)', paddingTop: '1.5rem', marginTop: '1rem' }}>

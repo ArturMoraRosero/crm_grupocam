@@ -141,3 +141,21 @@ export async function getGraphToken() {
 
   return inFlight;
 }
+
+/**
+ * Token de Graph SOLO por vía silenciosa (iframe prompt=none). No abre popup:
+ * sirve para cargas automáticas (ej. Dashboard) donde no hay gesto del usuario
+ * y un popup sería bloqueado. Devuelve null si no hay sesión silenciosa.
+ */
+export async function getGraphTokenSilent() {
+  const cached = getCachedGraphToken();
+  if (cached) return cached;
+  if (inFlight) {
+    try { return await inFlight; } catch { return null; }
+  }
+  try {
+    return await silentIframeAuth();
+  } catch {
+    return null;
+  }
+}

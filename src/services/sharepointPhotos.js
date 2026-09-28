@@ -32,7 +32,7 @@ const ROOT_SEGMENTS = ['CRM_CAM_Reportes', 'Visitas'];
 // CRMGrupoCAM) cacheada en el navegador de alguien, apuntaría al sitio anterior.
 const SITE_ID_CACHE_KEY = 'sp_gc_site_id';
 
-async function graphFetch(path, options = {}) {
+export async function graphFetch(path, options = {}) {
   const token = await getGraphToken();
   const response = await fetch(`${GRAPH}${path}`, {
     ...options,
@@ -44,7 +44,7 @@ async function graphFetch(path, options = {}) {
   return response;
 }
 
-async function parseGraphError(response) {
+export async function parseGraphError(response) {
   let detail = '';
   try {
     const body = await response.json();
@@ -55,7 +55,7 @@ async function parseGraphError(response) {
 
 // ── Site ID ──────────────────────────────────────────────────────────────────
 
-async function getSiteId() {
+export async function getSiteId() {
   const cached = sessionStorage.getItem(SITE_ID_CACHE_KEY);
   if (cached) return cached;
   const response = await graphFetch(`/sites/${SITE_HOST}:${SITE_PATH}`);
@@ -110,12 +110,12 @@ function compressImage(file) {
 
 // ── Carpeta por visita ───────────────────────────────────────────────────────
 
-function encodePath(...segments) {
+export function encodePath(...segments) {
   return segments.map(encodeURIComponent).join('/');
 }
 
 /** Quita caracteres inválidos/problemáticos para nombres de carpeta en SharePoint. */
-function sanitizeFolderName(name) {
+export function sanitizeFolderName(name) {
   return (name || '')
     .replace(/["*:<>?/\\|#%~&{}]/g, ' ')
     .replace(/\s+/g, ' ')
