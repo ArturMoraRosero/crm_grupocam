@@ -177,7 +177,7 @@ const photoThumbStyle = {
 
 const photoRemoveBtn = {
   position: 'absolute', top: -6, right: -6, width: 20, height: 20,
-  borderRadius: '50%', background: 'var(--cam-red)', color: '#fff',
+  borderRadius: '50%', background: 'var(--danger)', color: '#fff',
   border: 'none', cursor: 'pointer', fontSize: '0.7rem', lineHeight: 1,
   display: 'flex', alignItems: 'center', justifyContent: 'center'
 };
@@ -601,7 +601,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
               Cancelar
             </button>
             <button type="submit" disabled={isSaving}
-              style={{ padding: '0.6rem 1.6rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, opacity: isSaving ? 0.7 : 1 }}>
+              style={{ padding: '0.6rem 1.6rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: 'var(--on-accent)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, opacity: isSaving ? 0.7 : 1 }}>
               {isSaving ? `${savingLabel || 'Guardando...'}` : 'Guardar visita'}
             </button>
           </div>
@@ -728,7 +728,7 @@ function VisitChart({ visits, period }) {
         return (
           <g key={i}>
             <rect x={x} y={y} width={barW} height={Math.max(barH, 1)}
-              rx={4} fill={isToday ? 'var(--cam-red)' : 'rgba(192,57,43,0.35)'} />
+              rx={4} fill={isToday ? 'var(--cam-red)' : 'rgba(201,204,209,0.35)'} />
             {b.count > 0 && (
               <text x={x + barW / 2} y={y - 3} fontSize="10" fill="#fff" textAnchor="middle">{b.count}</text>
             )}
@@ -1014,7 +1014,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
           </span>
         )}
         <button onClick={handleNew}
-          style={{ padding: '0.55rem 1.4rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          style={{ padding: '0.55rem 1.4rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: 'var(--on-accent)', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
           + Nueva visita
         </button>
       </div>
@@ -1082,7 +1082,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
                   <Pencil size={14} strokeWidth={1.75} />
                 </button>
                 <button onClick={() => handleDelete(v.id)}
-                  style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)', color: 'var(--cam-red)', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(208,112,106,0.1)', border: '1px solid rgba(208,112,106,0.25)', color: 'var(--danger)', fontSize: '0.78rem', cursor: 'pointer' }}>
                   <Trash2 size={14} strokeWidth={1.75} />
                 </button>
               </div>

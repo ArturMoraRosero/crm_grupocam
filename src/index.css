@@ -1,29 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Paleta CAM: grafito y ámbar. Estilo corporativo sobrio: un solo acento. */
-  --cam-red: #d98a3d;
-  --cam-red-rgb: 217, 138, 61;
-  --cam-gray-dark: #4a453e;
-  --cam-gray-mid: #9a9081;
-  --cam-gray-light: #f2efea;
+  /* Paleta tomada del logo CAM: acero cepillado, plata y negro azulado.
+     --cam-red se conserva como nombre de token por compatibilidad: es el acento (plata). */
+  --cam-red: #c9ccd1;
+  --cam-red-rgb: 201, 204, 209;
+  --accent-hover: #e1e3e6;
+  --on-accent: #15191e;
+  --danger: #d0706a;
+  --cam-gray-dark: #3a4048;
+  --cam-gray-mid: #8a9098;
+  --cam-gray-light: #e6e7ea;
 
   /* System UI Tokens */
-  --bg-primary: #14110e;
-  --bg-secondary: #1e1a15;
-  --bg-tertiary: #28221b;
-  --text-primary: #f2efea;
-  --text-secondary: #a89e92;
+  --bg-primary: #0e1115;
+  --bg-secondary: #161a1f;
+  --bg-tertiary: #1f242a;
+  --text-primary: #e6e7ea;
+  --text-secondary: #9aa0a8;
 
-  --accent-blue: #4a90d9;
-  --accent-green: #3fae8e;
-  --accent-orange: #e0962f;
+  --accent-blue: #7d9bbd;
+  --accent-green: #6fa58c;
+  --accent-orange: #c9a45c;
 
-  --border-primary: rgba(154, 144, 129, 0.18);
-  --border-focus: rgba(217, 138, 61, 0.45);
+  --border-primary: rgba(174, 176, 181, 0.16);
+  --border-focus: rgba(201, 204, 209, 0.3);
 
   --glass-bg: var(--bg-secondary);
-  --glass-border: rgba(154, 144, 129, 0.16);
+  --glass-border: rgba(174, 176, 181, 0.16);
   
   --font-title: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -64,7 +68,7 @@ h3 { font-size: 1rem !important; font-weight: 600; }
 /* Buttons */
 .btn-primary {
   background-color: var(--cam-red);
-  color: #ffffff;
+  color: var(--on-accent);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.7rem 1.4rem;
   border-radius: 8px;
@@ -79,7 +83,7 @@ h3 { font-size: 1rem !important; font-weight: 600; }
 }
 
 .btn-primary:hover {
-  background-color: #c47a31;
+  background-color: var(--accent-hover);
 }
 
 .btn-secondary {
@@ -368,7 +372,7 @@ label {
   align-items: center;
   justify-content: flex-end;
   padding-right: 0.8rem;
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   font-size: 0.82rem;
   transition: width 0.6s ease;

@@ -785,7 +785,7 @@ export default function App() {
     return { name: reason, value: count, amount };
   }).filter(r => r.value > 0);
 
-  const COLORS = ['#d98a3d', '#9a9081', '#5b7fa6', '#6f9a86', '#c4b8a8', '#7a6a58', '#4a5a6a', '#b0694a'];
+  const COLORS = ['#c9ccd1', '#7d9bbd', '#8a9098', '#5d6670', '#6fa58c', '#aeb0b5', '#3f464f', '#b9a27a'];
 
   return (
     <div style={{ display: 'flex', background: 'var(--bg-primary)', minHeight: '100vh', position: 'relative' }}>
@@ -878,8 +878,8 @@ export default function App() {
       }}>
         {/* LOGO AREA */}
         <div style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: '#ffffff', borderRadius: '10px', padding: '20px 18px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <img src="/logo-cam.png" alt="CAM" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          <div style={{ borderRadius: '10px', overflow: 'hidden', width: '100%', border: '1px solid var(--border-primary)' }}>
+            <img src="/logo-cam-metal.jpg" alt="CAM" style={{ width: '100%', height: 'auto', display: 'block' }} />
           </div>
         </div>
 
@@ -898,7 +898,7 @@ export default function App() {
               onClick={() => { setView(item.id); setSidebarOpen(false); }}
               style={{
                 background: view === item.id ? 'var(--cam-red)' : 'transparent',
-                color: '#ffffff',
+                color: view === item.id ? 'var(--on-accent)' : 'var(--text-primary)',
                 border: 'none',
                 opacity: view === item.id ? 1 : 0.7,
                 padding: '0.85rem 1rem',
@@ -958,7 +958,7 @@ export default function App() {
         <button
           onClick={() => setSidebarOpen(o => !o)}
           aria-label="Menú"
-          style={{ position: 'fixed', top: '0.85rem', left: '0.85rem', zIndex: 1001, background: 'var(--cam-red)', color: '#fff', border: 'none', borderRadius: '10px', width: '46px', height: '46px', fontSize: '1.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}
+          style={{ position: 'fixed', top: '0.85rem', left: '0.85rem', zIndex: 1001, background: 'var(--cam-red)', color: 'var(--on-accent)', border: 'none', borderRadius: '10px', width: '46px', height: '46px', fontSize: '1.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}
         >
           {sidebarOpen ? <X size={22} strokeWidth={1.75} /> : <Menu size={22} strokeWidth={1.75} />}
         </button>
@@ -1042,7 +1042,7 @@ export default function App() {
                     top: '-4px', 
                     right: '-4px', 
                     background: 'var(--cam-red)', 
-                    color: '#fff', 
+                    color: 'var(--on-accent)', 
                     fontSize: '0.7rem', 
                     fontWeight: 'bold',
                     padding: '2px 6px',
@@ -1080,7 +1080,7 @@ export default function App() {
                       {alertsList.map((alert, idx) => (
                         <div key={idx} style={{ 
                           background: alert.type === 'overdue' ? 'rgba(201, 36, 42, 0.08)' : 'rgba(37, 99, 235, 0.08)',
-                          borderLeft: alert.type === 'overdue' ? '3px solid var(--cam-red)' : '3px solid var(--accent-blue)',
+                          borderLeft: alert.type === 'overdue' ? '3px solid var(--danger)' : '3px solid var(--accent-blue)',
                           padding: '0.8rem',
                           borderRadius: '6px'
                         }}>
@@ -1500,7 +1500,7 @@ export default function App() {
                             </span>
                           </td>
                           <td>{op.proximaAccion}</td>
-                          <td style={{ color: isOverdue ? 'var(--cam-red)' : 'inherit', fontWeight: isOverdue ? 'bold' : 'normal' }}>
+                          <td style={{ color: isOverdue ? 'var(--danger)' : 'inherit', fontWeight: isOverdue ? 'bold' : 'normal' }}>
                             {op.fechaAccion} {isOverdue && 'Vencida'}
                           </td>
                           {activeRole !== 'Vendedor' && <td>{op.responsable}</td>}
@@ -1563,7 +1563,7 @@ export default function App() {
                               style={{ 
                                 padding: '1.2rem', 
                                 borderRadius: '10px', 
-                                borderLeft: isOverdue ? '4px solid var(--cam-red)' : '1px solid var(--glass-border)',
+                                borderLeft: isOverdue ? '3px solid var(--danger)' : '1px solid var(--glass-border)',
                                 cursor: 'pointer' 
                               }}
                               onClick={() => handleEditClick(op)}
@@ -1588,7 +1588,7 @@ export default function App() {
                                 borderTop: '1px solid var(--border-primary)', 
                                 paddingTop: '0.6rem', 
                                 fontSize: '0.74rem',
-                                color: isOverdue ? 'var(--cam-red)' : 'var(--text-secondary)',
+                                color: isOverdue ? 'var(--danger)' : 'var(--text-secondary)',
                                 fontWeight: isOverdue ? 'bold' : 'normal',
                                 display: 'flex',
                                 justifyContent: 'space-between',
@@ -1816,7 +1816,7 @@ export default function App() {
 
                   {/* Migración local → Dataverse */}
                   {opportunities.length > 0 && (
-                    <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 10, border: '1px solid var(--cam-red)', background: 'rgba(192,57,43,0.08)' }}>
+                    <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 10, border: '1px solid var(--danger)', background: 'rgba(208,112,106,0.08)' }}>
                       <p style={{ color: '#fff', fontSize: '0.88rem', fontWeight: 600, marginBottom: 4 }}>
                         Migración de tratos locales
                       </p>
@@ -1826,7 +1826,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={handleMigrateLocalToDataverse}
-                        style={{ padding: '0.5rem 1.2rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ padding: '0.5rem 1.2rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: 'var(--on-accent)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                       >
                         <Upload size={15} strokeWidth={1.75} /> Migrar {opportunities.length} tratos a Dataverse
                       </button>

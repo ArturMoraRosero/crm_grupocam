@@ -5,7 +5,7 @@ import { META_SEMANAL, META_MENSUAL, eventosPlanos, eventosReuniones, resumen } 
 
 function Barra({ valor, meta }) {
   const pct = Math.min(100, Math.round((valor / meta) * 100));
-  const color = valor >= meta ? 'var(--accent-green)' : valor > 0 ? 'var(--accent-orange)' : 'var(--cam-red)';
+  const color = valor >= meta ? 'var(--accent-green)' : valor > 0 ? 'var(--accent-orange)' : 'var(--danger)';
   return (
     <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
       <div style={{ width: `${pct}%`, height: '100%', background: color }} />
