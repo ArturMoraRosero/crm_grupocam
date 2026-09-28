@@ -936,9 +936,9 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.2rem', marginBottom: '1.4rem' }}>
         {[
           { label: `Visitas · ${periodLabel}`, val: periodVisits.length, color: '#fff' },
-          { label: 'En seguimiento',            val: enSeguimiento,       color: '#e67e22' },
-          { label: 'Para cotizar',              val: paraCotizar,         color: '#5ba4e5' },
-          { label: 'Cerrados / ganados',        val: cerrados,            color: '#27ae60' }
+          { label: 'En seguimiento',            val: enSeguimiento,       color: '#fff' },
+          { label: 'Para cotizar',              val: paraCotizar,         color: '#fff' },
+          { label: 'Cerrados / ganados',        val: cerrados,            color: '#fff' }
         ].map(k => (
           <div key={k.label} className="kpi-card">
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>{k.label}</span>

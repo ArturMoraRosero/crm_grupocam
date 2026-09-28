@@ -785,7 +785,7 @@ export default function App() {
     return { name: reason, value: count, amount };
   }).filter(r => r.value > 0);
 
-  const COLORS = ['#c9242a', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
+  const COLORS = ['#d98a3d', '#9a9081', '#5b7fa6', '#6f9a86', '#c4b8a8', '#7a6a58', '#4a5a6a', '#b0694a'];
 
   return (
     <div style={{ display: 'flex', background: 'var(--bg-primary)', minHeight: '100vh', position: 'relative' }}>
@@ -1471,7 +1471,7 @@ export default function App() {
                               style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                             />
                           </td>
-                          <td style={{ fontWeight: 'bold', color: '#fff' }}>{op.codigo}<SyncBadge status={op._syncStatus} /></td>
+                          <td style={{ fontWeight: 600, color: '#fff', whiteSpace: 'nowrap' }}>{op.codigo}<SyncBadge status={op._syncStatus} /></td>
                           <td>
                             <div style={{ fontWeight: '600' }}>{op.cliente}</div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{op.contactoName}</div>
@@ -1509,7 +1509,7 @@ export default function App() {
                               <button 
                                 onClick={() => handleEditClick(op)}
                                 className="btn-secondary"
-                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderRadius: '4px' }}
+                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderRadius: '4px', whiteSpace: 'nowrap' }}
                               >
                                 <Pencil size={13} strokeWidth={1.75} /> Ver / Editar
                               </button>
