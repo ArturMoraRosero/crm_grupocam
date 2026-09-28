@@ -15,7 +15,7 @@ import './index.css';
 
 // System Roles mapping for active permissions
 const ROLES = [
-  { name: 'Comercial (Silvana Nichols)', id: 'Vendedor', user: 'Silvana Nichols' },
+  { name: 'Comercial (ventas@cam.ec)', id: 'Vendedor', user: 'ventas@cam.ec' },
   { name: 'Gerente General', id: 'Gerente', user: 'Jose Vallejo' },
   { name: 'Consultor Estratégico', id: 'Admin', user: 'Arturo Mora' }
 ];
@@ -149,7 +149,7 @@ export default function App() {
     etapa: ETAPAS[0],
     proximaAccion: PROXIMAS_ACCIONES[0],
     fechaAccion: '',
-    responsable: USUARIOS[0].name, // Default to Silvana
+    responsable: USUARIOS[0].name, // Default: cuenta comercial ventas@cam.ec
     estado: ESTADOS[0],
     motivoPerdida: '',
     fechaIngreso: '',
@@ -1085,7 +1085,7 @@ export default function App() {
               )}
             </div>
 
-            {/* BUTTON ADD REAL RECORD — visible para todos los roles, incluido Vendedor (Silvana) */}
+            {/* BUTTON ADD REAL RECORD — visible para todos los roles, incluido Vendedor (ventas@cam.ec) */}
             <button className="btn-primary" onClick={handleOpenNewModal} style={{ height: '40px' }}>
               ➕ Nueva Oportunidad
             </button>

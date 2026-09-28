@@ -51,7 +51,7 @@ export const MOTIVOS_PERDIDA = [
 ];
 
 export const USUARIOS = [
-  { id: 'u1', name: 'Silvana Nichols', role: 'Vendedor' },
+  { id: 'u1', name: 'ventas@cam.ec', role: 'Vendedor' },
   { id: 'u2', name: 'Jose Vallejo', role: 'Gerente General' },
   { id: 'u3', name: 'Arturo Mora', role: 'Consultor Estratégico' }
 ];
