@@ -10,6 +10,11 @@ import {
   subscribeToLogs, getSettings, saveSettings, fetchOpportunities, sendOpportunity, removeOpportunity,
   loginMicrosoft, getActiveToken, checkForRedirectToken, startTokenKeepAlive
 } from './services/dataverse';
+import {
+  LayoutDashboard, Briefcase, Columns3, MapPin, History, Database, User, Download, Menu, X, Bell, Plus,
+  Pencil, Calendar, ChevronLeft, ChevronRight, RotateCcw, Save, RefreshCw, Upload,
+  Trash2, AlertTriangle, FlaskConical
+} from 'lucide-react';
 import Visitas from './components/Visitas';
 import PlanosPanel from './components/PlanosPanel';
 import MetasCard from './components/MetasCard';
@@ -30,14 +35,14 @@ function SyncBadge({ status }) {
   if (status === 'error') {
     return (
       <span
-        title="No se pudo sincronizar con Dataverse. Este registro solo existe en este navegador — otros usuarios no lo verán hasta reintentar la sincronización."
+        title="No se pudo sincronizar con Dataverse. Este registro solo existe en este navegador; otros usuarios no lo verán hasta reintentar la sincronización."
         style={{
           fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, marginLeft: 6,
           background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.4)',
           whiteSpace: 'nowrap', cursor: 'help'
         }}
       >
-        ⚠ No sincronizado
+        <AlertTriangle size={11} strokeWidth={2} style={{ verticalAlign: '-1px', marginRight: 3 }} />No sincronizado
       </span>
     );
   }
@@ -51,7 +56,7 @@ function SyncBadge({ status }) {
           whiteSpace: 'nowrap', cursor: 'help'
         }}
       >
-        🧪 Solo local (Demo)
+        <FlaskConical size={11} strokeWidth={2} style={{ verticalAlign: '-1px', marginRight: 3 }} />Solo local (Demo)
       </span>
     );
   }
@@ -177,7 +182,7 @@ export default function App() {
     const token = checkForRedirectToken();
     if (token) {
       setActiveMsalToken(token);
-      triggerToast('🟢 Conectado exitosamente con tu cuenta de Microsoft.', 'rgba(16, 185, 129, 0.5)');
+      triggerToast('Conectado exitosamente con tu cuenta de Microsoft.', 'rgba(16, 185, 129, 0.5)');
     }
     // Renovación proactiva del token: mientras la sesión M365 siga viva, la
     // sesión del CRM no se corta aunque pasen horas cargando información.
@@ -383,19 +388,19 @@ export default function App() {
     
     // Validations
     if (!currentOp.cliente || !currentOp.monto || !currentOp.fechaAccion) {
-      triggerToast('⚠️ Por favor completa todos los campos requeridos.', 'var(--accent-orange)');
+      triggerToast('Por favor completa todos los campos requeridos.', 'var(--accent-orange)');
       return;
     }
 
     if (currentOp.estado === 'Perdida' && !currentOp.motivoPerdida) {
-      triggerToast('⚠️ Debes especificar el motivo de pérdida.', 'var(--accent-orange)');
+      triggerToast('Debes especificar el motivo de pérdida.', 'var(--accent-orange)');
       return;
     }
 
     // Años tipeados a mano (ej. "20206") pasan el <input type="date"> pero
     // Dataverse rechaza la fecha con HTTP 400. Se valida antes de enviar.
     if (currentOp.fechaAccion && !/^20\d{2}-\d{2}-\d{2}$/.test(currentOp.fechaAccion)) {
-      triggerToast(`⚠️ Fecha de seguimiento inválida ("${currentOp.fechaAccion}"): revisa el año.`, 'var(--accent-orange)');
+      triggerToast(`Fecha de seguimiento inválida ("${currentOp.fechaAccion}"): revisa el año.`, 'var(--accent-orange)');
       return;
     }
 
@@ -428,11 +433,11 @@ export default function App() {
       setOpportunities(prev => prev.map(o => o.id === currentOp.id ? record : o));
 
       if (ok && !demo) {
-        triggerToast(`✅ Oportunidad ${currentOp.codigo} actualizada y sincronizada con Dataverse.`);
+        triggerToast(`Oportunidad ${currentOp.codigo} actualizada y sincronizada con Dataverse.`);
       } else if (demo) {
-        triggerToast(`🧪 ${currentOp.codigo} actualizada solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+        triggerToast(`${currentOp.codigo} actualizada solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
       } else {
-        triggerToast(`⚠️ No se pudo sincronizar con Dataverse — quedó solo en este navegador: ${error?.message || ''}`, '#f87171');
+        triggerToast(`No se pudo sincronizar con Dataverse, quedó solo en este navegador: ${error?.message || ''}`, '#f87171');
       }
     } else {
       // CREATION
@@ -453,11 +458,11 @@ export default function App() {
       setOpportunities(prev => prev.map(o => o.id === newId ? record : o));
 
       if (ok && !demo) {
-        triggerToast(`🎉 Oportunidad ${savedOp.codigo} creada y sincronizada con Dataverse.`);
+        triggerToast(`Oportunidad ${savedOp.codigo} creada y sincronizada con Dataverse.`);
       } else if (demo) {
-        triggerToast(`🧪 ${savedOp.codigo} creada solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
+        triggerToast(`${savedOp.codigo} creada solo en este navegador (Modo Demo, no visible para otros usuarios).`, '#fbbf24');
       } else {
-        triggerToast(`⚠️ No se pudo sincronizar con Dataverse — quedó solo en este navegador: ${error?.message || ''}`, '#f87171');
+        triggerToast(`No se pudo sincronizar con Dataverse, quedó solo en este navegador: ${error?.message || ''}`, '#f87171');
       }
     }
 
@@ -473,7 +478,7 @@ export default function App() {
       
       await removeOpportunity(id);
       
-      triggerToast(`🗑️ Oportunidad ${code} eliminada del sistema.`, '#f87171');
+      triggerToast(`Oportunidad ${code} eliminada del sistema.`, '#f87171');
       setIsModalOpen(false);
     }
   };
@@ -496,11 +501,11 @@ export default function App() {
       setOpportunities(prev => prev.map(o => o.id === id ? record : o));
 
       if (ok && !demo) {
-        triggerToast(`🚀 ${op.codigo} movido a ${nextStage}`);
+        triggerToast(`${op.codigo} movido a ${nextStage}`);
       } else if (demo) {
-        triggerToast(`🧪 ${op.codigo} movido a ${nextStage} (solo local, Modo Demo).`, '#fbbf24');
+        triggerToast(`${op.codigo} movido a ${nextStage} (solo local, Modo Demo).`, '#fbbf24');
       } else {
-        triggerToast(`⚠️ ${op.codigo} movido a ${nextStage} localmente, pero no se sincronizó: ${error?.message || ''}`, '#f87171');
+        triggerToast(`${op.codigo} movido a ${nextStage} localmente, pero no se sincronizó: ${error?.message || ''}`, '#f87171');
       }
     }
   };
@@ -559,11 +564,11 @@ export default function App() {
     logAudit('Acción Masiva', 'Varios', auditMsg);
 
     if (demoCount === editCount) {
-      triggerToast(`🧪 Se actualizaron ${editCount} oportunidades solo en este navegador (Modo Demo).`, '#fbbf24');
+      triggerToast(`Se actualizaron ${editCount} oportunidades solo en este navegador (Modo Demo).`, '#fbbf24');
     } else if (failed > 0) {
-      triggerToast(`⚠️ ${editCount - failed}/${editCount} sincronizadas con Dataverse. ${failed} quedaron solo locales — revisa conexión/sesión.`, '#f87171');
+      triggerToast(`${editCount - failed}/${editCount} sincronizadas con Dataverse. ${failed} quedaron solo locales, revisa conexión/sesión.`, '#f87171');
     } else {
-      triggerToast(`⚡ Se actualizaron ${editCount} oportunidades en lote y se sincronizaron con Dataverse.`);
+      triggerToast(`Se actualizaron ${editCount} oportunidades en lote y se sincronizaron con Dataverse.`);
     }
     setSelectedIds([]);
     setBulkStage('');
@@ -585,7 +590,7 @@ export default function App() {
         await removeOpportunity(id);
       }
       
-      triggerToast(`🗑️ ${selectedIds.length} oportunidades eliminadas masivamente.`, '#f87171');
+      triggerToast(`${selectedIds.length} oportunidades eliminadas masivamente.`, '#f87171');
       setSelectedIds([]);
       setShowBulkActions(false);
     }
@@ -593,7 +598,7 @@ export default function App() {
 
   // Dataverse Sync All Trigger (GET)
   const handleDataverseSyncAll = async () => {
-    triggerToast('🔄 Sincronizando con Microsoft Dataverse...');
+    triggerToast('Sincronizando con Microsoft Dataverse...');
     try {
       const results = await fetchOpportunities(opportunities);
       // Dataverse manda: reemplazamos el estado con lo que devuelva (aunque sea vacío).
@@ -601,16 +606,16 @@ export default function App() {
       if (Array.isArray(results)) {
         setOpportunities(results.map(r => ({ ...r, _syncStatus: 'synced' })));
       }
-      triggerToast('⚡ Dataverse sincronizado con éxito. Revisa la consola.', 'var(--accent-green)');
+      triggerToast('Dataverse sincronizado con éxito. Revisa la consola.', 'var(--accent-green)');
     } catch (e) {
-      triggerToast(`❌ Error de conexión al sincronizar: ${e.message || 'CORS o Red'}`, '#f87171');
+      triggerToast(`Error de conexión al sincronizar: ${e.message || 'CORS o Red'}`, '#f87171');
     }
   };
 
   // Migrar tratos locales → Dataverse (POST bulk)
   const handleMigrateLocalToDataverse = async () => {
     if (!window.confirm(`¿Migrar tratos locales a Dataverse? Solo se enviarán los que aún NO existan (validado por código), para no duplicar.`)) return;
-    triggerToast('📤 Verificando duplicados y migrando...');
+    triggerToast('Verificando duplicados y migrando...');
     let ok = 0, fail = 0, skipped = 0;
 
     // Traer los códigos ya existentes en Dataverse para no duplicar
@@ -619,7 +624,7 @@ export default function App() {
       const existing = await fetchOpportunities([]);
       existingCodes = new Set(existing.map(o => o.codigo));
     } catch (e) {
-      triggerToast(`❌ No se pudo verificar Dataverse antes de migrar: ${e.message}`, '#f87171');
+      triggerToast(`No se pudo verificar Dataverse antes de migrar: ${e.message}`, '#f87171');
       return;
     }
 
@@ -644,8 +649,8 @@ export default function App() {
     setOpportunities(migrated);
     triggerToast(
       fail === 0
-        ? `✅ ${ok} migrados, ${skipped} ya existían (omitidos).`
-        : `⚠️ ${ok} migrados, ${skipped} omitidos, ${fail} fallaron. Revisa la consola.`,
+        ? `${ok} migrados, ${skipped} ya existían (omitidos).`
+        : `${ok} migrados, ${skipped} omitidos, ${fail} fallaron. Revisa la consola.`,
       fail === 0 ? 'rgba(16,185,129,0.5)' : 'rgba(234,179,8,0.5)'
     );
   };
@@ -658,7 +663,7 @@ export default function App() {
     sessionStorage.setItem('sso_silent_failed', '1');
     sessionStorage.removeItem('sso_silent_attempted');
     setActiveMsalToken(null);
-    triggerToast('🔴 Sesión de Microsoft cerrada.');
+    triggerToast('Sesión de Microsoft cerrada.');
   };
 
   const handleResetStorage = () => {
@@ -678,7 +683,7 @@ export default function App() {
         }
       ]);
       setApiLogs([]);
-      triggerToast('🔄 Sistema de almacenamiento local restablecido.', 'var(--accent-orange)');
+      triggerToast('Sistema de almacenamiento local restablecido.', 'var(--accent-orange)');
     }
   };
 
@@ -722,7 +727,7 @@ export default function App() {
     XLSX.writeFile(wb, `Reporte_CRM_CAM_${todayStr}.xlsx`);
     
     logAudit('Reporte', 'Global', 'Generación y exportación de reporte completo en formato MS Excel');
-    triggerToast('📊 Reporte Excel exportado correctamente.', 'var(--accent-green)');
+    triggerToast('Reporte Excel exportado correctamente.', 'var(--accent-green)');
   };
 
   // KPI Calculations
@@ -812,7 +817,7 @@ export default function App() {
             height: '10px', 
             borderRadius: '50%', 
             background: activeMsalToken ? '#10b981' : '#ef4444',
-            boxShadow: `0 0 10px ${activeMsalToken ? '#10b981' : '#ef4444'}`
+            boxShadow: 'none'
           }}></div>
           <div>
             <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>
@@ -840,9 +845,9 @@ export default function App() {
           onClick={() => setView('Dataverse')}
           title="Ver Ajustes de Dataverse"
         >
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 10px #fbbf24' }}></div>
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24' }}></div>
           <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>🧪 Modo Demo activo</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>Modo Demo activo</div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
               Tus datos NO se comparten con otros usuarios
             </div>
@@ -873,7 +878,7 @@ export default function App() {
       }}>
         {/* LOGO AREA */}
         <div style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px 18px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ background: '#ffffff', borderRadius: '10px', padding: '20px 18px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <img src="/logo-cam.png" alt="CAM" style={{ width: '100%', height: 'auto', display: 'block' }} />
           </div>
         </div>
@@ -881,12 +886,12 @@ export default function App() {
         {/* NAVIGATION MENUS */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
           {[
-            { id: 'Dashboard', label: 'Dashboard' },
-            { id: 'Opportunities', label: 'Oportunidades' },
-            { id: 'Kanban', label: 'Pipeline Comercial' },
-            { id: 'Visits', label: 'Visitas' },
-            { id: 'Audit', label: 'Auditoría' },
-            { id: 'Dataverse', label: 'Dataverse API' }
+            { id: 'Dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+            { id: 'Opportunities', label: 'Oportunidades', Icon: Briefcase },
+            { id: 'Kanban', label: 'Pipeline Comercial', Icon: Columns3 },
+            { id: 'Visits', label: 'Visitas', Icon: MapPin },
+            { id: 'Audit', label: 'Auditoría', Icon: History },
+            { id: 'Dataverse', label: 'Dataverse API', Icon: Database }
           ].map(item => (
             <button
               key={item.id}
@@ -908,6 +913,7 @@ export default function App() {
                 transition: 'var(--transition-smooth)'
               }}
             >
+              <item.Icon size={17} strokeWidth={1.75} />
               {item.label}
             </button>
           ))}
@@ -927,7 +933,7 @@ export default function App() {
               justifyContent: 'center',
               fontSize: '1.1rem'
             }}>
-              👤
+              <User size={18} strokeWidth={1.75} />
             </div>
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>{activeUser.user}</div>
@@ -939,7 +945,7 @@ export default function App() {
             className="btn-secondary" 
             style={{ width: '100%', justifyContent: 'center', padding: '0.5rem', fontSize: '0.8rem' }}
           >
-            📥 Exportar Excel
+            <Download size={15} strokeWidth={1.75} /> Exportar Excel
           </button>
         </div>
       </aside>
@@ -954,7 +960,7 @@ export default function App() {
           aria-label="Menú"
           style={{ position: 'fixed', top: '0.85rem', left: '0.85rem', zIndex: 1001, background: 'var(--cam-red)', color: '#fff', border: 'none', borderRadius: '10px', width: '46px', height: '46px', fontSize: '1.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}
         >
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <X size={22} strokeWidth={1.75} /> : <Menu size={22} strokeWidth={1.75} />}
         </button>
       )}
 
@@ -975,7 +981,7 @@ export default function App() {
           paddingBottom: '1.5rem'
         }}>
           <div>
-            <h1 style={{ fontSize: '2.2rem', color: '#fff', marginBottom: '0.3rem' }}>
+            <h1 style={{ fontSize: '1.6rem', color: '#fff', marginBottom: '0.3rem' }}>
               {view === 'Dashboard' && 'Dashboard Ejecutivo'}
               {view === 'Opportunities' && 'Cartera de Oportunidades'}
               {view === 'Kanban' && 'Pipeline Comercial'}
@@ -1003,7 +1009,7 @@ export default function App() {
                 onChange={(e) => {
                   setActiveRole(e.target.value);
                   setSelectedIds([]);
-                  triggerToast(`🔄 Rol cambiado a ${e.target.value}. Datos recalculados.`);
+                  triggerToast(`Rol cambiado a ${e.target.value}. Datos recalculados.`);
                 }}
                 style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: '210px', height: '36px' }}
               >
@@ -1029,7 +1035,7 @@ export default function App() {
                   position: 'relative'
                 }}
               >
-                🔔
+                <Bell size={18} strokeWidth={1.75} />
                 {alertsList.length > 0 && (
                   <span style={{ 
                     position: 'absolute', 
@@ -1041,7 +1047,7 @@ export default function App() {
                     fontWeight: 'bold',
                     padding: '2px 6px',
                     borderRadius: '50%',
-                    boxShadow: '0 0 8px var(--cam-red)'
+                    boxShadow: 'none'
                   }}>
                     {alertsList.length}
                   </span>
@@ -1090,7 +1096,7 @@ export default function App() {
 
             {/* BUTTON ADD REAL RECORD — visible para todos los roles, incluido Vendedor (ventas@cam.ec) */}
             <button className="btn-primary" onClick={handleOpenNewModal} style={{ height: '40px' }}>
-              ➕ Nueva Oportunidad
+              <Plus size={15} strokeWidth={1.75} /> Nueva Oportunidad
             </button>
           </div>
         </header>
@@ -1122,27 +1128,27 @@ export default function App() {
             {/* KPI PANEL */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1.5rem' }}>
               <div className="kpi-card primary">
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Pipeline Comercial</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.06em' }}>Pipeline Comercial</span>
                 <div className="kpi-val">${kpiPipelineTotal.toLocaleString()}</div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{activeDeals.length} tratos activos en curso</span>
               </div>
               <div className="kpi-card success">
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Ventas Mayo 2026</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.06em' }}>Ventas Mayo 2026</span>
                 <div className="kpi-val">${salesThisMonth.toLocaleString()}</div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)' }}>Ganadas en el mes actual</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Ganadas en el mes actual</span>
               </div>
               <div className="kpi-card info">
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Tasa de Cierre</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.06em' }}>Tasa de Cierre</span>
                 <div className="kpi-val">{kpiTasaCierre}%</div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sobre {totalClosed} tratos cerrados</span>
               </div>
               <div className="kpi-card warning">
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Margen Promedio</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.06em' }}>Margen Promedio</span>
                 <div className="kpi-val">{avgMargin}%</div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent-orange)' }}>Margen bruto de tratos ganados</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Margen bruto de tratos ganados</span>
               </div>
               <div className="kpi-card">
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Clientes Clave (A)</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.06em' }}>Clientes Clave (A)</span>
                 <div className="kpi-val" style={{ color: '#fff' }}>{keyAccountsCount}</div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Tratos de más de $75,000 USD</span>
               </div>
@@ -1159,7 +1165,7 @@ export default function App() {
             <div className="resp-2col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem' }}>
               
               {/* Funnel de Ventas Interactivo Custom */}
-              <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <div className="glass" style={{ padding: '2rem', borderRadius: '10px' }}>
                 <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Funnel de Ventas Comercial CAM</span>
                   <span style={{ fontSize: '0.85rem', color: 'var(--cam-gray-mid)' }}>Suma de Montos Acumulados</span>
@@ -1188,7 +1194,7 @@ export default function App() {
               </div>
 
               {/* Distribuición por Línea de Negocio */}
-              <div className="glass" style={{ padding: '2rem', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+              <div className="glass" style={{ padding: '2rem', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '1.5rem' }}>Pipeline por Línea de Negocio</h3>
                 <div style={{ flex: 1, minHeight: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -1229,7 +1235,7 @@ export default function App() {
             <div className="resp-2col" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2rem' }}>
               
               {/* Desempeño por Vendedor */}
-              <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <div className="glass" style={{ padding: '2rem', borderRadius: '10px' }}>
                 <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '1.5rem' }}>Desempeño y Cartera por Responsable</h3>
                 <div style={{ minHeight: '320px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -1250,7 +1256,7 @@ export default function App() {
               </div>
 
               {/* Reporte de Pérdidas y Motivos */}
-              <div className="glass" style={{ padding: '2rem', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+              <div className="glass" style={{ padding: '2rem', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '1rem' }}>Análisis de Pérdidas</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '1.5rem' }}>Distribución de motivos en oportunidades perdidas</p>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1rem' }}>
@@ -1351,7 +1357,7 @@ export default function App() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <span style={{ fontSize: '0.92rem', fontWeight: 'bold', color: '#fff' }}>
-                    ⚡ {selectedIds.length} oportunidades seleccionadas
+                    {selectedIds.length} oportunidades seleccionadas
                   </span>
                   <button 
                     className="btn-secondary" 
@@ -1495,7 +1501,7 @@ export default function App() {
                           </td>
                           <td>{op.proximaAccion}</td>
                           <td style={{ color: isOverdue ? 'var(--cam-red)' : 'inherit', fontWeight: isOverdue ? 'bold' : 'normal' }}>
-                            {op.fechaAccion} {isOverdue && '⚠️ Vencida'}
+                            {op.fechaAccion} {isOverdue && 'Vencida'}
                           </td>
                           {activeRole !== 'Vendedor' && <td>{op.responsable}</td>}
                           <td>
@@ -1505,7 +1511,7 @@ export default function App() {
                                 className="btn-secondary"
                                 style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderRadius: '4px' }}
                               >
-                                ✏️ Ver / Editar
+                                <Pencil size={13} strokeWidth={1.75} /> Ver / Editar
                               </button>
                             </div>
                           </td>
@@ -1574,7 +1580,7 @@ export default function App() {
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
                                 <span style={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#fff' }}>${op.monto?.toLocaleString()}</span>
                                 <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
-                                  👤 {op.responsable}
+                                  {op.responsable}
                                 </span>
                               </div>
 
@@ -1588,7 +1594,7 @@ export default function App() {
                                 justifyContent: 'space-between',
                                 alignItems: 'center'
                               }}>
-                                <span>📅 {op.proximaAccion}: {op.fechaAccion}</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Calendar size={12} strokeWidth={1.75} />{op.proximaAccion}: {op.fechaAccion}</span>
                               </div>
 
                               {/* Pipeline quick shift buttons */}
@@ -1601,14 +1607,14 @@ export default function App() {
                                   disabled={ETAPAS.indexOf(op.etapa) === 0}
                                   style={{ padding: '2px 8px', background: 'var(--bg-tertiary)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', opacity: ETAPAS.indexOf(op.etapa) === 0 ? 0.3 : 1 }}
                                 >
-                                  ←
+                                  <ChevronLeft size={14} strokeWidth={2} />
                                 </button>
                                 <button 
                                   onClick={() => handleMoveKanban(op.id, 1)}
                                   disabled={ETAPAS.indexOf(op.etapa) === ETAPAS.length - 1}
                                   style={{ padding: '2px 8px', background: 'var(--bg-tertiary)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', opacity: ETAPAS.indexOf(op.etapa) === ETAPAS.length - 1 ? 0.3 : 1 }}
                                 >
-                                  →
+                                  <ChevronRight size={14} strokeWidth={2} />
                                 </button>
                               </div>
                             </div>
@@ -1679,7 +1685,7 @@ export default function App() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button className="btn-secondary" onClick={handleResetStorage} style={{ color: '#ef4444' }}>
-                ⚠️ Restablecer Datos Locales
+                <RotateCcw size={15} strokeWidth={1.75} /> Restablecer Datos Locales
               </button>
             </div>
           </div>
@@ -1693,15 +1699,15 @@ export default function App() {
             
             {/* Formulario de Configuración */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div className="glass" style={{ padding: '2rem', borderRadius: '16px' }}>
+              <div className="glass" style={{ padding: '2rem', borderRadius: '10px' }}>
                 <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  ⚙️ Ajustes de Microsoft Dataverse
+                  Ajustes de Microsoft Dataverse
                 </h3>
                 
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   saveSettings(dvSettings);
-                  triggerToast('⚙️ Ajustes de Dataverse actualizados correctamente.');
+                  triggerToast('Ajustes de Dataverse actualizados correctamente.');
                 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                   
                   <div>
@@ -1710,7 +1716,7 @@ export default function App() {
                       value={dvSettings.mode} 
                       onChange={(e) => setDvSettings({ ...dvSettings, mode: e.target.value })}
                     >
-                      <option value="live">Modo Conexión Real (API Dynamics 365) — Recomendado</option>
+                      <option value="live">Modo Conexión Real (API Dynamics 365), recomendado</option>
                       <option value="demo">Modo Demo / Simulación Local (los datos NO se comparten con otros usuarios)</option>
                     </select>
                   </div>
@@ -1801,10 +1807,10 @@ export default function App() {
 
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                     <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                      💾 Guardar Parámetros
+                      <Save size={15} strokeWidth={1.75} /> Guardar Parámetros
                     </button>
                     <button type="button" className="btn-secondary" onClick={handleDataverseSyncAll}>
-                      🔄 Sincronizar Ahora
+                      <RefreshCw size={15} strokeWidth={1.75} /> Sincronizar Ahora
                     </button>
                   </div>
 
@@ -1812,7 +1818,7 @@ export default function App() {
                   {opportunities.length > 0 && (
                     <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 10, border: '1px solid var(--cam-red)', background: 'rgba(192,57,43,0.08)' }}>
                       <p style={{ color: '#fff', fontSize: '0.88rem', fontWeight: 600, marginBottom: 4 }}>
-                        📤 Migración de tratos locales
+                        Migración de tratos locales
                       </p>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.8rem' }}>
                         {opportunities.length} tratos en localStorage. Envíalos a Dataverse para sincronización completa.
@@ -1822,7 +1828,7 @@ export default function App() {
                         onClick={handleMigrateLocalToDataverse}
                         style={{ padding: '0.5rem 1.2rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                       >
-                        📤 Migrar {opportunities.length} tratos a Dataverse
+                        <Upload size={15} strokeWidth={1.75} /> Migrar {opportunities.length} tratos a Dataverse
                       </button>
                     </div>
                   )}
@@ -1831,9 +1837,9 @@ export default function App() {
 
               {/* Conector Microsoft SSO Interactivo */}
               {dvSettings.mode === 'live' && dvSettings.authMethod === 'sso' && (
-                <div className="glass animate-fade-in" style={{ padding: '2rem', borderRadius: '16px', borderLeft: '4px solid #00a4ef' }}>
+                <div className="glass animate-fade-in" style={{ padding: '2rem', borderRadius: '10px', borderLeft: '4px solid #00a4ef' }}>
                   <h4 style={{ color: '#fff', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    🔑 Estado de la Sesión Microsoft
+                    Estado de la Sesión Microsoft
                   </h4>
                   {activeMsalToken ? (
                     <div>
@@ -1906,14 +1912,14 @@ export default function App() {
             </div>
 
             {/* Consola Técnica Telemetría en Vivo */}
-            <div className="glass" style={{ padding: '2rem', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+            <div className="glass" style={{ padding: '2rem', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
                 <h3 style={{ color: '#fff', fontSize: '1.2rem' }}>Consola de Telemetría OData API</h3>
                 <button 
                   onClick={() => {
                     setApiLogs([]);
                     sessionStorage.removeItem('dataverse_logs');
-                    triggerToast('🧹 Consola de logs vaciada.');
+                    triggerToast('Consola de logs vaciada.');
                   }}
                   className="btn-secondary" 
                   style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
@@ -1988,7 +1994,7 @@ export default function App() {
             maxHeight: '92vh',
             overflowY: 'auto',
             padding: isMobile ? '1.4rem' : '2.5rem',
-            borderRadius: '16px',
+            borderRadius: '10px',
             position: 'relative'
           }}>
             {/* CLOSE BUTTON */}
@@ -2207,7 +2213,7 @@ export default function App() {
                     op={currentOp}
                     onUploaded={(names, primerPlano) => {
                       logAudit('Plano', currentOp.codigo, `${names.length} plano(s) subido(s) a SharePoint: ${names.join(', ')}${primerPlano ? ' (primer plano, suma a la meta)' : ''}`);
-                      triggerToast(`📐 ${names.length} plano(s) subido(s) a SharePoint para ${currentOp.codigo}.`, 'var(--accent-green)');
+                      triggerToast(`${names.length} plano(s) subido(s) a SharePoint para ${currentOp.codigo}.`, 'var(--accent-green)');
                       setPlanosVersion(v => v + 1);
                     }}
                   />
@@ -2223,7 +2229,7 @@ export default function App() {
                     className="btn-danger" 
                     style={{ flex: 1, justifyContent: 'center' }}
                   >
-                    🗑️ Eliminar Registro
+                    <Trash2 size={15} strokeWidth={1.75} /> Eliminar Registro
                   </button>
                 )}
                 
@@ -2241,7 +2247,7 @@ export default function App() {
                   className="btn-primary" 
                   style={{ flex: 2, justifyContent: 'center' }}
                 >
-                  💾 {currentOp.id ? 'Guardar Cambios' : 'Registrar Oportunidad'}
+                  <Save size={15} strokeWidth={1.75} /> {currentOp.id ? 'Guardar Cambios' : 'Registrar Oportunidad'}
                 </button>
               </div>
             </form>

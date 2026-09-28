@@ -56,7 +56,7 @@ export default class ErrorBoundary extends React.Component {
           }}
         >
           <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem' }}>
-            ⚠️ Ocurrió un error al mostrar la vista
+            Ocurrió un error al mostrar la vista
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1rem' }}>
             Tus datos están a salvo. Puedes volver al pipeline sin recargar la página.

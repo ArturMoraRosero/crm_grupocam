@@ -43,7 +43,7 @@ function Meta({ titulo, detalle, data, estado, onConectar }) {
             <div style={{ marginTop: '0.9rem', fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'grid', gap: 4 }}>
               {porResponsable.map(r => (
                 <div key={r.name} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>👤 {r.name}</span>
+                  <span>{r.name}</span>
                   <span>semana {r.semana}/{META_SEMANAL} · mes {r.mes}/{META_MENSUAL}</span>
                 </div>
               ))}
@@ -101,14 +101,14 @@ export default function MetasCard({ opportunities, soloEjecutivo, refreshKey }) 
       </div>
       <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap' }}>
         <Meta
-          titulo="📐 Planos por cotizar"
+          titulo="Planos por cotizar"
           detalle="Oportunidades que recibieron su primer plano (subido a SharePoint)"
           data={planos}
           estado={planosEstado}
           onConectar={() => cargarPlanos(true)}
         />
         <Meta
-          titulo="🤝 Reuniones con tomador de decisión"
+          titulo="Reuniones con tomador de decisión"
           detalle="Visitas a cuenta A (P1) con Decisor directo: Constructor, Arquitecto o Promotor"
           data={reuniones}
           estado={visitasEstado}

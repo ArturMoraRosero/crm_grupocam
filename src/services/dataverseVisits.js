@@ -67,7 +67,7 @@ function parseDataverseError(status, errText) {
   // ahí para no volcarle a Silvana una traza técnica ilegible en el toast.
   const traceIdx = detail.search(/\s(at|en)\s+(Microsoft|System)\./);
   if (traceIdx > 0) detail = detail.slice(0, traceIdx).trim();
-  return `HTTP ${status}${detail ? ` — ${detail}` : ''}`;
+  return `HTTP ${status}${detail ? `: ${detail}` : ''}`;
 }
 
 // ── Campo mapping: app → OData ──────────────────────────────────────────────

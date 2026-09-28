@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Brand Cromática CAM — Grafito & Ámbar */
+  /* Paleta CAM: grafito y ámbar. Estilo corporativo sobrio: un solo acento. */
   --cam-red: #d98a3d;
   --cam-red-rgb: 217, 138, 61;
   --cam-gray-dark: #4a453e;
@@ -22,13 +22,13 @@
   --border-primary: rgba(154, 144, 129, 0.18);
   --border-focus: rgba(217, 138, 61, 0.45);
 
-  --glass-bg: rgba(30, 26, 21, 0.82);
-  --glass-border: rgba(154, 144, 129, 0.14);
+  --glass-bg: var(--bg-secondary);
+  --glass-border: rgba(154, 144, 129, 0.16);
   
-  --font-title: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-title: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
-  --shadow-premium: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
-  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-premium: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --transition-smooth: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 * {
@@ -48,21 +48,17 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-title);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-/* Glassmorphism */
+h3 { font-size: 1rem !important; font-weight: 600; }
+
+/* Paneles planos (antes glassmorphism) */
 .glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-secondary);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-premium);
-  transition: var(--transition-smooth);
-}
-
-.glass:hover {
-  border-color: rgba(201, 36, 42, 0.25);
+  box-shadow: none;
+  border-radius: 10px;
 }
 
 /* Buttons */
@@ -80,17 +76,10 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 0.5rem;
   transition: var(--transition-smooth);
-  box-shadow: 0 4px 12px rgba(201, 36, 42, 0.2);
 }
 
 .btn-primary:hover {
-  background-color: #b01c21;
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 16px rgba(201, 36, 42, 0.35);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
+  background-color: #c47a31;
 }
 
 .btn-secondary {
@@ -112,7 +101,6 @@ h1, h2, h3, h4, h5, h6 {
 .btn-secondary:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--cam-gray-mid);
-  transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -134,7 +122,6 @@ h1, h2, h3, h4, h5, h6 {
 .btn-danger:hover {
   background-color: rgba(239, 68, 68, 0.3);
   color: #ef4444;
-  transform: translateY(-1px);
 }
 
 /* Badges */
@@ -194,14 +181,14 @@ th {
   font-family: var(--font-title);
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  padding: 1.1rem 1.2rem;
-  border-bottom: 2px solid var(--border-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 td {
-  padding: 1.1rem 1.2rem;
+  padding: 0.85rem 1.1rem;
   border-bottom: 1px solid var(--border-primary);
   color: var(--text-primary);
   transition: var(--transition-smooth);
@@ -269,10 +256,11 @@ label {
 
 /* Dashboard KPI Card */
 .kpi-card {
-  padding: 1.5rem;
-  border-radius: 16px;
-  border-left: 4px solid var(--cam-gray-mid);
-  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  padding: 1.25rem 1.4rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  border-top: 2px solid var(--glass-border);
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -280,38 +268,17 @@ label {
   overflow: hidden;
 }
 
-.kpi-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(201, 36, 42, 0.05) 0%, transparent 70%);
-  pointer-events: none;
-}
-
 .kpi-card.primary {
-  border-left-color: var(--cam-red);
-}
-
-.kpi-card.success {
-  border-left-color: var(--accent-green);
-}
-
-.kpi-card.info {
-  border-left-color: var(--accent-blue);
-}
-
-.kpi-card.warning {
-  border-left-color: var(--accent-orange);
+  border-top-color: var(--cam-red);
 }
 
 .kpi-card .kpi-val {
   font-family: var(--font-title);
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 600;
   color: #ffffff;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tech / Terminal Console for Dataverse logs */
@@ -371,9 +338,6 @@ label {
   transition: var(--transition-smooth);
 }
 
-.funnel-row:hover {
-  transform: translateX(4px);
-}
 
 .funnel-label {
   width: 160px;
@@ -398,16 +362,16 @@ label {
 
 .funnel-bar {
   height: 100%;
-  background: linear-gradient(90deg, rgba(201, 36, 42, 0.8), rgba(201, 36, 42, 0.4));
+  background: rgba(var(--cam-red-rgb), 0.75);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding-right: 0.8rem;
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.82rem;
-  transition: width 1s ease-in-out;
+  transition: width 0.6s ease;
 }
 
 .funnel-val {
@@ -425,7 +389,7 @@ label {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.2s ease forwards;
 }
 
 /* responsive */

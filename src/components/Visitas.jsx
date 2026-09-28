@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchVisits, sendVisit, removeVisit } from '../services/dataverseVisits';
 import { listVisitPhotos, deleteVisitPhoto, uploadVisitPhotos } from '../services/sharepointPhotos';
+import { FlaskConical, Image as ImageIcon, X, Link2, ExternalLink, Pencil, Trash2, MapPin } from 'lucide-react';
 import { getSettings } from '../services/dataverse';
 import { LINEAS_NEGOCIO, USUARIOS } from '../mockData';
 
@@ -17,7 +18,7 @@ function SyncBadge({ status }) {
           whiteSpace: 'nowrap', cursor: 'help'
         }}
       >
-        🧪 Solo local (Demo)
+        <FlaskConical size={11} strokeWidth={2} style={{ verticalAlign: '-1px', marginRight: 3 }} />Solo local (Demo)
       </span>
     );
   }
@@ -238,25 +239,25 @@ function PhotoSection({ visitId, projectName, fecha, pendingFiles, setPendingFil
     <div style={sectionCard}>
       <div style={{ ...sectionTitle, justifyContent: 'space-between' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span>📸</span> Fotos del proyecto
+          Fotos del proyecto
           <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, opacity: 0.7 }}>
             · SharePoint / Visitas CRM · {total}/{MAX_FOTOS}
           </span>
         </span>
-        {loading && <span style={{ fontWeight: 400, textTransform: 'none' }}>⏳ Cargando…</span>}
+        {loading && <span style={{ fontWeight: 400, textTransform: 'none' }}>Cargando…</span>}
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
         {/* Fotos ya en SharePoint */}
         {existing.map(p => (
           <div key={p.id} style={{ position: 'relative' }}>
-            <a href={p.webUrl} target="_blank" rel="noreferrer" title={`${p.name} — abrir en SharePoint`}>
+            <a href={p.webUrl} target="_blank" rel="noreferrer" title={`${p.name}: abrir en SharePoint`}>
               {p.thumbnailUrl
                 ? <img src={p.thumbnailUrl} alt={p.name} style={photoThumbStyle} />
-                : <div style={{ ...photoThumbStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', fontSize: '1.6rem' }}>🖼️</div>
+                : <div style={{ ...photoThumbStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}><ImageIcon size={22} strokeWidth={1.5} /></div>
               }
             </a>
-            <button type="button" style={photoRemoveBtn} title="Eliminar de SharePoint" onClick={() => removeExisting(p)}>✕</button>
+            <button type="button" style={photoRemoveBtn} title="Eliminar de SharePoint" onClick={() => removeExisting(p)}><X size={12} strokeWidth={2} /></button>
           </div>
         ))}
 
@@ -268,7 +269,7 @@ function PhotoSection({ visitId, projectName, fecha, pendingFiles, setPendingFil
               position: 'absolute', bottom: 4, left: 4, fontSize: '0.6rem', fontWeight: 700,
               background: 'rgba(230,126,34,0.9)', color: '#fff', padding: '1px 6px', borderRadius: 4
             }}>Pendiente</span>
-            <button type="button" style={photoRemoveBtn} title="Quitar" onClick={() => removePending(idx)}>✕</button>
+            <button type="button" style={photoRemoveBtn} title="Quitar" onClick={() => removePending(idx)}><X size={12} strokeWidth={2} /></button>
           </div>
         ))}
 
@@ -304,7 +305,7 @@ function PhotoSection({ visitId, projectName, fecha, pendingFiles, setPendingFil
         </p>
       )}
       {error && (
-        <p style={{ fontSize: '0.78rem', color: '#e67e22', marginTop: 8 }}>⚠️ {error}</p>
+        <p style={{ fontSize: '0.78rem', color: '#e67e22', marginTop: 8 }}>{error}</p>
       )}
     </div>
   );
@@ -338,13 +339,13 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.8rem' }}>
           <div>
             <h2 style={{ color: '#fff', fontSize: '1.3rem', marginBottom: 2 }}>
-              {form.id ? '✏️ Editar visita' : '📍 Nueva visita comercial'}
+              {form.id ? 'Editar visita' : 'Nueva visita comercial'}
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
               Tabla: cr168_visits · Dataverse
             </p>
           </div>
-          <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '1.4rem', cursor: 'pointer' }}>✕</button>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }} aria-label="Cerrar"><X size={20} strokeWidth={1.75} /></button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -355,7 +356,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
             borderRadius: 10, padding: '0.8rem 1rem', marginBottom: '1.4rem',
             display: 'flex', alignItems: 'center', gap: 10
           }}>
-            <span style={{ fontSize: '1rem' }}>🔗</span>
+            <Link2 size={16} strokeWidth={1.75} color="#5ba4e5" />
             <label style={{ ...labelStyle, margin: 0, textTransform: 'none', fontSize: '0.82rem', color: '#5ba4e5', flex: 1 }}>
               Vincular a oportunidad existente <span style={{ opacity: 0.6 }}>(opcional)</span>
             </label>
@@ -364,7 +365,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
               onChange={e => set('oportunidadId', e.target.value || null)}
               style={{ ...inputStyle, width: 240, background: 'transparent', border: '1px solid rgba(39,130,210,0.3)', color: '#5ba4e5' }}
             >
-              <option value="">— Sin vincular —</option>
+              <option value="">Sin vincular</option>
               {(opportunities || []).map(op => (
                 <option key={op.id} value={op.id}>{op.codigo} · {op.cliente}</option>
               ))}
@@ -373,7 +374,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
 
           {/* 1. Datos generales */}
           <div style={sectionCard}>
-            <div style={sectionTitle}><span>📋</span> Datos generales</div>
+            <div style={sectionTitle}>Datos generales</div>
             <div style={rowGrid(3)}>
               <div>
                 <label style={labelStyle}>Fecha</label>
@@ -406,7 +407,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
 
           {/* 2. Ubicación */}
           <div style={sectionCard}>
-            <div style={sectionTitle}><span>📍</span> Ubicación del proyecto</div>
+            <div style={sectionTitle}>Ubicación del proyecto</div>
             <div style={{ marginBottom: '1rem' }}>
               <label style={labelStyle}>Nombre del proyecto / obra</label>
               <input type="text" style={inputStyle} placeholder="Ej: Edificio Torres del Norte" value={form.nombreProyecto} onChange={e => set('nombreProyecto', e.target.value)} required />
@@ -434,7 +435,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
             {form.linkMaps && (
               <a href={form.linkMaps} target="_blank" rel="noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: '#5ba4e5', marginTop: 4 }}>
-                🗺️ Ver en Google Maps ↗
+                Ver en Google Maps <ExternalLink size={13} strokeWidth={1.75} />
               </a>
             )}
           </div>
@@ -450,7 +451,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
 
           {/* 4. Información comercial */}
           <div style={sectionCard}>
-            <div style={sectionTitle}><span>💼</span> Información comercial</div>
+            <div style={sectionTitle}>Información comercial</div>
             <div style={rowGrid(3)}>
               <div>
                 <label style={labelStyle}>Tipo de cliente</label>
@@ -491,7 +492,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
 
           {/* 4. Diagnóstico */}
           <div style={sectionCard}>
-            <div style={sectionTitle}><span>🔍</span> Diagnóstico</div>
+            <div style={sectionTitle}>Diagnóstico</div>
             <div style={{ marginBottom: '1rem' }}>
               <label style={labelStyle}>Necesidad detectada / Dolor técnico</label>
               <textarea
@@ -535,7 +536,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
 
           {/* 5. Estado y próxima acción */}
           <div style={sectionCard}>
-            <div style={sectionTitle}><span>🎯</span> Estado y próxima acción</div>
+            <div style={sectionTitle}>Estado y próxima acción</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginBottom: '1rem' }}>
               {ESTADOS_OPP.map(estado => (
                 <button
@@ -550,10 +551,10 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
                     fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer'
                   }}
                 >
-                  {estado === 'En seguimiento' && '🕐 '}
-                  {estado === 'Cotizar / presupuestar' && '📄 '}
-                  {estado === 'Cerrado / ganado' && '✅ '}
-                  {estado === 'Descartado' && '❌ '}
+                  {estado === 'En seguimiento' && ''}
+                  {estado === 'Cotizar / presupuestar' && ''}
+                  {estado === 'Cerrado / ganado' && ''}
+                  {estado === 'Descartado' && ''}
                   {estado}
                 </button>
               ))}
@@ -601,7 +602,7 @@ function VisitaForm({ visit, opportunities, onSave, onCancel, isSaving, savingLa
             </button>
             <button type="submit" disabled={isSaving}
               style={{ padding: '0.6rem 1.6rem', borderRadius: 8, background: 'var(--cam-red)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, opacity: isSaving ? 0.7 : 1 }}>
-              {isSaving ? `⏳ ${savingLabel || 'Guardando...'}` : '💾 Guardar visita'}
+              {isSaving ? `${savingLabel || 'Guardando...'}` : 'Guardar visita'}
             </button>
           </div>
         </form>
@@ -814,7 +815,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
     const badDate = [['Fecha de visita', form.fecha], ['Fecha de seguimiento', form.fechaSeguimiento]]
       .find(([, v]) => v && !/^20\d{2}-\d{2}-\d{2}$/.test(v));
     if (badDate) {
-      triggerToast(`⚠️ ${badDate[0]} inválida ("${badDate[1]}"): revisa el año.`, 'var(--accent-orange)');
+      triggerToast(`${badDate[0]} inválida ("${badDate[1]}"): revisa el año.`, 'var(--accent-orange)');
       return;
     }
     setIsSaving(true);
@@ -856,24 +857,24 @@ export default function Visitas({ opportunities = [], triggerToast }) {
             pendingPhotoFiles,
             (i, n) => setSavingLabel(`Subiendo fotos (${i}/${n})...`)
           );
-          if (uploaded.length) photoSummary += ` 📸 ${uploaded.length} foto(s) subida(s) a SharePoint.`;
-          if (errors.length) photoSummary += ` ⚠️ ${errors.length} foto(s) fallaron: ${errors[0]}`;
+          if (uploaded.length) photoSummary += ` ${uploaded.length} foto(s) subida(s) a SharePoint.`;
+          if (errors.length) photoSummary += ` ${errors.length} foto(s) fallaron: ${errors[0]}`;
         }
       }
 
       setShowForm(false);
       setEditingVisit(null);
       if (isDemo) {
-        triggerToast(`🧪 ${isNew ? 'Visita registrada' : 'Visita actualizada'} solo en este navegador (Modo Demo, no visible para otros usuarios).${photoSummary}`, '#fbbf24');
+        triggerToast(`${isNew ? 'Visita registrada' : 'Visita actualizada'} solo en este navegador (Modo Demo, no visible para otros usuarios).${photoSummary}`, '#fbbf24');
       } else if (saved?._opportunityLinkDropped) {
-        triggerToast(`⚠️ Visita guardada, pero no se pudo vincular a la oportunidad (revisar el nombre del lookup en Dataverse). Los demás datos sí se guardaron.${photoSummary}`, '#fbbf24');
+        triggerToast(`Visita guardada, pero no se pudo vincular a la oportunidad (revisar el nombre del lookup en Dataverse). Los demás datos sí se guardaron.${photoSummary}`, '#fbbf24');
       } else if (saved?._droppedFields?.includes('cr168_contactphone')) {
-        triggerToast(`⚠️ Visita guardada, pero el teléfono del contacto no se sincronizó: falta crear la columna cr168_contactphone en la tabla de visitas.${photoSummary}`, '#fbbf24');
+        triggerToast(`Visita guardada, pero el teléfono del contacto no se sincronizó: falta crear la columna cr168_contactphone en la tabla de visitas.${photoSummary}`, '#fbbf24');
       } else {
-        triggerToast(`${isNew ? '📍 Visita registrada y sincronizada con Dataverse.' : '✅ Visita actualizada y sincronizada con Dataverse.'}${photoSummary}`);
+        triggerToast(`${isNew ? 'Visita registrada y sincronizada con Dataverse.' : 'Visita actualizada y sincronizada con Dataverse.'}${photoSummary}`);
       }
     } catch (e) {
-      triggerToast(`❌ Error al guardar: ${e.message}`, 'rgba(192,57,43,0.5)');
+      triggerToast(`Error al guardar: ${e.message}`, 'rgba(192,57,43,0.5)');
     } finally {
       setIsSaving(false);
       setSavingLabel('');
@@ -885,9 +886,9 @@ export default function Visitas({ opportunities = [], triggerToast }) {
     try {
       await removeVisit(id);
       setVisits(prev => prev.filter(v => v.id !== id));
-      triggerToast('🗑️ Visita eliminada.');
+      triggerToast('Visita eliminada.');
     } catch (e) {
-      triggerToast(`❌ Error: ${e.message}`, 'rgba(192,57,43,0.5)');
+      triggerToast(`Error: ${e.message}`, 'rgba(192,57,43,0.5)');
     }
   };
 
@@ -952,7 +953,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 14, padding: '1.2rem 1.4rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>
-              📊 Actividad de visitas — {periodLabel}
+              Actividad de visitas · {periodLabel}
             </span>
             {totalMonto > 0 && (
               <span style={{ fontSize: '0.82rem', color: '#27ae60', fontWeight: 600 }}>
@@ -969,7 +970,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
         {/* Breakdown por ejecutivo */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 14, padding: '1.2rem 1.4rem', minWidth: 180 }}>
           <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', display: 'block', marginBottom: '1rem' }}>
-            👤 Por ejecutivo
+            Por ejecutivo
           </span>
           {byEjecutivo.length === 0
             ? <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>—</div>
@@ -992,7 +993,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <input
           type="text"
-          placeholder="🔍 Buscar proyecto, contacto, zona..."
+          placeholder="Buscar proyecto, contacto, zona..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           style={{ flex: 1, minWidth: 220, padding: '0.55rem 0.9rem', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.88rem' }}
@@ -1009,7 +1010,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
         </select>
         {isSyncing && (
           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-            ⏳ Sincronizando...
+            Sincronizando...
           </span>
         )}
         <button onClick={handleNew}
@@ -1021,7 +1022,7 @@ export default function Visitas({ opportunities = [], triggerToast }) {
       {/* Tabla de visitas */}
       {filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📍</div>
+          <div style={{ marginBottom: '1rem', opacity: 0.5 }}><MapPin size={40} strokeWidth={1.25} /></div>
           <p style={{ fontSize: '1rem' }}>No hay visitas registradas aún.</p>
           <p style={{ fontSize: '0.85rem', marginTop: 6 }}>Haz clic en "Nueva visita" para registrar la primera.</p>
         </div>
@@ -1078,11 +1079,11 @@ export default function Visitas({ opportunities = [], triggerToast }) {
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={() => handleEdit(v)}
                   style={{ padding: '4px 10px', borderRadius: 6, background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)', fontSize: '0.78rem', cursor: 'pointer' }}>
-                  ✏️
+                  <Pencil size={14} strokeWidth={1.75} />
                 </button>
                 <button onClick={() => handleDelete(v.id)}
                   style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)', color: 'var(--cam-red)', fontSize: '0.78rem', cursor: 'pointer' }}>
-                  🗑️
+                  <Trash2 size={14} strokeWidth={1.75} />
                 </button>
               </div>
             </div>

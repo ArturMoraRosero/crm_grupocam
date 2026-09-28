@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { listPlanos, uploadPlano, PLANO_ACCEPT } from '../services/sharepointPlanos';
+import { Upload, FileText } from 'lucide-react';
 
 const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -101,7 +102,7 @@ export default function PlanosPanel({ op, onUploaded }) {
               disabled={!!uploading}
               onClick={() => inputRef.current?.click()}
             >
-              📐 Subir plano
+              <Upload size={15} strokeWidth={1.75} /> Subir plano
             </button>
             {!connected && !loading && (
               <button type="button" className="btn-secondary" onClick={load}>
@@ -138,7 +139,7 @@ export default function PlanosPanel({ op, onUploaded }) {
               <ul style={{ listStyle: 'none', padding: 0, margin: '0.75rem 0 0', display: 'grid', gap: '0.4rem' }}>
                 {files.map(f => (
                   <li key={f.id} style={{ fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                    <a href={f.webUrl} target="_blank" rel="noreferrer" style={{ color: '#fff', wordBreak: 'break-all' }}>📄 {f.name}</a>
+                    <a href={f.webUrl} target="_blank" rel="noreferrer" style={{ color: '#fff', wordBreak: 'break-all', display: 'inline-flex', gap: 6, alignItems: 'center' }}><FileText size={14} strokeWidth={1.75} />{f.name}</a>
                     <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                       {fmtSize(f.size)} · {fmtDate(f.createdDateTime)}{f.createdBy ? ` · ${f.createdBy}` : ''}
                     </span>

@@ -50,7 +50,7 @@ export async function parseGraphError(response) {
     const body = await response.json();
     detail = body?.error?.message || '';
   } catch { /* cuerpo no-JSON */ }
-  return `HTTP ${response.status}${detail ? ` — ${detail}` : ''}`;
+  return `HTTP ${response.status}${detail ? `: ${detail}` : ''}`;
 }
 
 // ── Site ID ──────────────────────────────────────────────────────────────────
